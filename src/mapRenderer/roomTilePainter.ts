@@ -26,7 +26,8 @@ import {
  */
 export function paintRoom(
   graphics: Phaser.GameObjects.Graphics,
-  room: RoomNode
+  room: RoomNode,
+  activeRoomId = ''
 ): void {
   // Regenerate template structure to obtain interior tile layouts
   const template = getTemplateForRoom(room.roomType, room.features);
@@ -152,21 +153,25 @@ export function paintRoom(
           break;
 
         case 'DOOR':
-          // Door openings inside room boundaries
-          graphics.lineStyle(3, COLOR_HOLOGRAM_BLUE, 0.9);
-          // Find matching world door on this spot
           const localDoor = room.doors.find(
             (d) => d.x === wx && d.y === wy
           );
 
-          if (localDoor) {
-            if (localDoor.direction === 'N' || localDoor.direction === 'S') {
-              // Horizontal door line
-              graphics.lineBetween(px, py + TILE_SIZE / 2, px + TILE_SIZE, py + TILE_SIZE / 2);
-            } else {
-              // Vertical door line
-              graphics.lineBetween(px + TILE_SIZE / 2, py, px + TILE_SIZE / 2, py + TILE_SIZE);
-            }
+          if (!localDoor) break;
+
+          if (!localDoor.connectedDoorId && room.id !== activeRoomId) {
+            graphics.fillStyle(COLOR_HULL_GUNMETAL, 1.0);
+            graphics.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+            graphics.lineStyle(1.5, COLOR_BULKHEAD_STEEL, 1.0);
+            graphics.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
+            break;
+          }
+
+          graphics.lineStyle(3, COLOR_HOLOGRAM_BLUE, 0.9);
+          if (localDoor.direction === 'N' || localDoor.direction === 'S') {
+            graphics.lineBetween(px, py + TILE_SIZE / 2, px + TILE_SIZE, py + TILE_SIZE / 2);
+          } else {
+            graphics.lineBetween(px + TILE_SIZE / 2, py, px + TILE_SIZE / 2, py + TILE_SIZE);
           }
           break;
 

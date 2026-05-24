@@ -1,5 +1,5 @@
 import { APTITUDE_REGISTRY } from './aptitudeRegistry';
-import { Gear } from './characterTypes';
+import { Gear, AptitudeType } from './characterTypes';
 
 export const TRAIT_REGISTRY: Record<string, string> = {
   // Alexis Vance
@@ -91,7 +91,7 @@ export function getTraitTooltipText(name: string, modifier: number): string {
  * Compiles tooltip HTML for a given aptitude.
  */
 export function getAptitudeTooltipText(aptitude: string): string {
-  const def = APTITUDE_REGISTRY[aptitude as any];
+  const def = APTITUDE_REGISTRY[aptitude as AptitudeType];
   if (!def) {
     return `<div style="font-family: var(--font-display); font-weight: bold;">${escapeHtml(aptitude)}</div>`;
   }

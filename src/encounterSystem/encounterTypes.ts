@@ -1,5 +1,6 @@
 import { Card } from '@cardEngine/cardDefinitions';
 import { Character, Trait } from '@characterSystem/characterTypes';
+import { PlayerAction, PlayerActionPromptContext } from '@characterSystem/playerActionModel';
 
 export type ObstacleType = 'PERSISTENT' | 'ADVERSARY' | 'PERSONAL' | 'GROUP' | 'SAFETY';
 
@@ -29,6 +30,7 @@ export interface TestResult {
   finalDealerTotal: number;
   traitsExhausted: string[];
   damageTaken?: string; // Name of the Trait permanently lost if busted
+  obstacleResolution?: 'cleared' | 'unresolved' | 'bypassed' | 'contained' | 'sealed' | 'destroyed';
 }
 
 export interface EVAState {
@@ -38,7 +40,7 @@ export interface EVAState {
 
 export interface TestUI {
   showRound(playerHands: Map<string, Card[]>, dealerHand: Card[], tension: number): Promise<void>;
-  promptPlayerAction(character: Character, hand: Card[], canUseTrait: boolean): Promise<'HIT' | 'STAND' | { type: 'TRAIT'; traitName: string }>;
+  promptPlayerAction(character: Character, hand: Card[], canUseTrait: boolean, context?: PlayerActionPromptContext): Promise<PlayerAction>;
   promptDeadPCFlashback(deadChar: Character, livingChar: Character, availableCards: Card[]): Promise<{ cardToGive: Card; flashbackText: string } | null>;
   showTestResult(result: TestResult, keepOverlayOpen?: boolean): Promise<void>;
   promptBustedTraitSelection(character: Character): Promise<Trait | null>;

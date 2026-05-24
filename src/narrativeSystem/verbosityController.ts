@@ -1,7 +1,8 @@
-import { VerbosityLevel } from './narrativeTypes';
+import { NarrativeEventType, NarrativeInterruptionVolume, VerbosityLevel } from './narrativeTypes';
+import { getNarrativeVolumePolicy, shouldNarrateEvent } from './narrativeInterruptionVolumePolicy';
 
 export class VerbosityController {
-  private level: VerbosityLevel = 'FULL';
+  private level: VerbosityLevel = 'FREQUENT';
 
   public setLevel(newLevel: VerbosityLevel) {
     this.level = newLevel;
@@ -11,20 +12,20 @@ export class VerbosityController {
     return this.level;
   }
 
-  public shouldNarrate(eventType: string): boolean {
-    if (this.level === 'FULL') return true;
-    
-    if (this.level === 'KEY_MOMENTS') {
-      const keyEvents = ['CHARACTER_DEATH', 'CRISIS_TRIGGERED', 'CRISIS_RESOLVED', 'ADVERSARY_ENCOUNTER'];
-      return keyEvents.includes(eventType);
-    }
-    
-    if (this.level === 'MINIMAL') {
-      const minimalEvents = ['CHARACTER_DEATH'];
-      return minimalEvents.includes(eventType);
-    }
-    
-    return true;
+  public getPromptMaxTokens(): number {
+    return getNarrativeVolumePolicy(this.level).maxTokens;
+  }
+
+  public getPromptLengthRule(): string {
+    return getNarrativeVolumePolicy(this.level).promptLengthRule;
+  }
+
+  public getVolume(): NarrativeInterruptionVolume {
+    return this.level;
+  }
+
+  public shouldNarrate(eventType: NarrativeEventType): boolean {
+    return shouldNarrateEvent(this.level, eventType);
   }
 }
 

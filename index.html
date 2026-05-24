@@ -78,6 +78,11 @@
       <aside id="narrative-panel" class="panel panel--narrative" aria-label="Game narrative">
         <header class="panel__header">
           <h2 class="panel__title">Narration</h2>
+          <select id="narrative-log-filter" class="panel__select" aria-label="Filter narration log">
+            <option value="all">All</option>
+            <option value="rules">Rules</option>
+            <option value="narration">Narration</option>
+          </select>
           <button id="btn-toggle-narrative" class="panel-toggle" type="button" aria-label="Collapse narration panel" title="Collapse narration">‹</button>
         </header>
         <div id="narrative-log" class="narrative-log" role="log" aria-live="polite">
@@ -219,9 +224,9 @@
         <label class="settings-field">
           <span class="settings-field__label">Verbosity</span>
           <select id="setting-verbosity" class="settings-field__select">
-            <option value="full">Full Immersion</option>
-            <option value="key-moments" selected>Key Moments</option>
-            <option value="minimal">Minimal</option>
+            <option value="RARE">Rare</option>
+            <option value="FREQUENT" selected>Frequent</option>
+            <option value="CONSTANT">Constant</option>
           </select>
         </label>
       </fieldset>

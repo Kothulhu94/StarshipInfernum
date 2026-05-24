@@ -3,7 +3,6 @@ import { gameEventBus } from './gameEventBus';
 import { Character } from '@characterSystem/characterTypes';
 import { ScenarioConfig } from '@scenarioData/scenarioTypes';
 import { Deck } from '@cardEngine/deckManager';
-import { Card } from '@cardEngine/cardDefinitions';
 import { setupCrisesAndJokers } from '@crisisSystem/jokerEventHandler';
 import { RoomNodeGraph } from '@mapGenerator/roomNodeGraph';
 import { ShipLayoutBuilder } from '@mapGenerator/shipLayoutBuilder';
@@ -40,6 +39,7 @@ export class GameStateStore {
       survivalDeckCards: [],
       roDeckCards: [],
       drawnJokers: [],
+      adversaryInstances: [],
     };
   }
 
@@ -150,6 +150,7 @@ export class GameStateStore {
     this.state.survivalDeckCards = (survivalDeck as any).cards;
     this.state.roDeckCards = (roDeck as any).cards;
     this.state.drawnJokers = [];
+    this.state.adversaryInstances = [];
 
     this.state.gamePhase = 'EXPLORING';
     

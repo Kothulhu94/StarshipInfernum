@@ -2,20 +2,27 @@ import { gameEventBus } from '@gameFlow/gameEventBus';
 import { NarrativeEvent } from '@narrativeSystem/narrativeTypes';
 import { narrativeRouter } from '@narrativeSystem/narrativeEventRouter';
 
+type LogKind = 'all' | 'rules' | 'narration';
+
 export function initNarrativeLogPanel(): void {
   const container = document.querySelector('.narrative-log__entries');
+  const filter = document.getElementById('narrative-log-filter') as HTMLSelectElement | null;
   if (!container) return;
+
+  if (filter) {
+    filter.addEventListener('change', () => applyLogFilter(filter.value as LogKind));
+  }
 
   // Listen to simple system log additions
   gameEventBus.on('log_added', (msg: string) => {
-    printTypewriter(msg, getLogClass(msg));
+    printTypewriter(msg, getLogClass(msg), 'rules');
   });
 
   // Listen to rich narrative event triggers
   gameEventBus.on('narrative_triggered', async (event: NarrativeEvent) => {
     const text = await narrativeRouter.handleEvent(event);
     if (text) {
-      printTypewriter(text, getNarrativeClass(event.type));
+      printTypewriter(text, getNarrativeClass(event.type), 'narration');
     }
   });
 
@@ -31,9 +38,11 @@ export function initNarrativeLogPanel(): void {
     for (const msg of historyLog) {
       const entry = document.createElement('div');
       entry.className = `narrative-entry ${getLogClass(msg)}`;
+      entry.dataset.logKind = 'rules';
       entry.textContent = msg;
       container.appendChild(entry);
     }
+    applyLogFilter(filter?.value as LogKind | undefined);
     if (scrollWrapper) {
       scrollWrapper.scrollTop = scrollWrapper.scrollHeight;
     }
@@ -43,14 +52,16 @@ export function initNarrativeLogPanel(): void {
 /**
  * Typewriter print effect for logs.
  */
-function printTypewriter(text: string, cssClass: string): void {
+function printTypewriter(text: string, cssClass: string, logKind: Exclude<LogKind, 'all'>): void {
   const container = document.querySelector('.narrative-log__entries');
   const scrollWrapper = document.getElementById('narrative-log');
   if (!container || !scrollWrapper) return;
 
   const entry = document.createElement('div');
   entry.className = `narrative-entry ${cssClass} typewriter-cursor`;
+  entry.dataset.logKind = logKind;
   container.appendChild(entry);
+  applyLogFilter((document.getElementById('narrative-log-filter') as HTMLSelectElement | null)?.value as LogKind | undefined);
 
   let i = 0;
   const speed = 15; // ms per char
@@ -65,6 +76,14 @@ function printTypewriter(text: string, cssClass: string): void {
       entry.classList.remove('typewriter-cursor');
     }
   }, speed);
+}
+
+function applyLogFilter(filterValue: LogKind = 'all'): void {
+  const entries = document.querySelectorAll<HTMLElement>('.narrative-log__entries .narrative-entry');
+  entries.forEach((entry) => {
+    const kind = entry.dataset.logKind || 'rules';
+    entry.hidden = filterValue !== 'all' && kind !== filterValue;
+  });
 }
 
 /**

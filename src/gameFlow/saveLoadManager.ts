@@ -3,6 +3,7 @@ import { RoomNodeGraph } from '@mapGenerator/roomNodeGraph';
 import { getScenarioById } from '@scenarioData/scenarioRegistry';
 import { SerializableGameState, GameState } from './gameFlowTypes';
 import { gameEventBus } from './gameEventBus';
+import { normalizeRoomObstacleState } from '@mapGenerator/roomObstacleState';
 
 const SAVE_KEY_PREFIX = 'starship-infernum-';
 
@@ -54,6 +55,7 @@ export class SaveLoadManager {
       survivalDeckCards: state.survivalDeckCards,
       roDeckCards: state.roDeckCards,
       drawnJokers: state.drawnJokers,
+      adversaryInstances: state.adversaryInstances,
       mapGraphSerialized: {
         rooms: roomsArray,
         corridors: corridorsArray,
@@ -85,7 +87,7 @@ export class SaveLoadManager {
       // Reconstruct RoomNodeGraph
       const newGraph = new RoomNodeGraph();
       for (const room of parsed.mapGraphSerialized.rooms) {
-        newGraph.addRoom(room);
+        newGraph.addRoom(normalizeRoomObstacleState(room));
       }
       for (const corridor of parsed.mapGraphSerialized.corridors) {
         newGraph.addCorridor(corridor);
@@ -112,6 +114,7 @@ export class SaveLoadManager {
         state.survivalDeckCards = parsed.survivalDeckCards;
         state.roDeckCards = parsed.roDeckCards;
         state.drawnJokers = parsed.drawnJokers || [];
+        state.adversaryInstances = parsed.adversaryInstances || [];
       });
 
       gameEventBus.emit('history_reloaded', parsed.historyLog);

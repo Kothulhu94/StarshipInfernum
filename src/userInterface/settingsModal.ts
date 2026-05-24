@@ -14,7 +14,7 @@ export function initSettingsModal(): void {
   // Load initial settings values
   if (verbositySelect) {
     verbositySelect.addEventListener('change', () => {
-      const val = verbositySelect.value.toUpperCase().replace('-', '_') as VerbosityLevel;
+      const val = verbositySelect.value.toUpperCase() as VerbosityLevel;
       verbosityController.setLevel(val);
     });
   }

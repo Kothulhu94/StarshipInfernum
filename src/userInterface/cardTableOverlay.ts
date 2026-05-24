@@ -4,6 +4,7 @@ import { TestUI, TestResult } from '@encounterSystem/encounterTypes';
 import { evaluateHand } from '@cardEngine/handEvaluator';
 import { getNPCDecision } from '@gameFlow/npcDecisionEngine';
 import { executeShapeshifterSwap, executeSmugglerSwap } from '@characterSystem/aptitudeExecutor';
+import { getPlayerActionAvailability, PlayerAction, PlayerActionPromptContext } from '@characterSystem/playerActionModel';
 import { showGhostFlashbackModal } from './ghostFlashbackModal';
 import { gameStateStore } from '@gameFlow/gameStateStore';
 
@@ -11,6 +12,8 @@ import { promptTraitSelection, promptBustedTraitSelection } from './hitStandCont
 
 // Local cache of dealer hand for decision context
 let currentDealerHand: Card[] = [];
+let currentPlayerHands: Map<string, Card[]> = new Map();
+let currentTension = 0;
 let hasUsedShapeshifterSwap = false;
 let hasUsedSmugglerSwap = false;
 
@@ -70,6 +73,29 @@ export class CardTableOverlay implements TestUI {
     }
   }
 
+  private getOrCreateActionButton(
+    controls: HTMLElement,
+    id: string,
+    label: string,
+    title: string,
+    modifierClass: string
+  ): HTMLButtonElement {
+    const existing = document.getElementById(id) as HTMLButtonElement | null;
+    if (existing) {
+      existing.textContent = label;
+      existing.title = title;
+      return existing;
+    }
+
+    const button = document.createElement('button');
+    button.id = id;
+    button.className = `action-button ${modifierClass}`;
+    button.title = title;
+    button.textContent = label;
+    controls.appendChild(button);
+    return button;
+  }
+
   /**
    * Renders the Blackjack table state.
    */
@@ -79,6 +105,8 @@ export class CardTableOverlay implements TestUI {
     tension: number
   ): Promise<void> {
     currentDealerHand = dealerHand;
+    currentPlayerHands = playerHands;
+    currentTension = tension;
 
     const overlay = document.getElementById('card-table-overlay');
     if (!overlay) return;
@@ -151,8 +179,15 @@ export class CardTableOverlay implements TestUI {
   public async promptPlayerAction(
     character: Character,
     hand: Card[],
-    canUseTrait: boolean
-  ): Promise<'HIT' | 'STAND' | { type: 'TRAIT'; traitName: string }> {
+    canUseTrait: boolean,
+    context: PlayerActionPromptContext = {}
+  ): Promise<PlayerAction> {
+    const availability = getPlayerActionAvailability(character, hand, canUseTrait, {
+      ...context,
+      hasUsedShapeshifterSwap,
+      hasUsedSmugglerSwap
+    });
+
     // 1. Resolve for AI NPC
     if (character.isAI) {
       await new Promise((r) => setTimeout(r, 900)); // Natural AI thinking delay
@@ -160,7 +195,7 @@ export class CardTableOverlay implements TestUI {
       const decision = getNPCDecision(character, {
         playerHand: hand,
         dealerHand: currentDealerHand,
-        canUseTrait,
+        canUseTrait: availability.canUseTrait,
         hasUsedShapeshifterSwap,
         hasUsedSmugglerSwap,
       });
@@ -168,22 +203,17 @@ export class CardTableOverlay implements TestUI {
       if (typeof decision === 'object' && decision.type === 'SHAPESHIFTER_SWAP') {
         executeShapeshifterSwap(hand, currentDealerHand);
         hasUsedShapeshifterSwap = true;
-        gameStateStore.logMessage(`${character.name} used Shapeshifter Swap with Dealer's card.`);
-        // Re-render and prompt again
-        const handsMap = new Map<string, Card[]>();
-        handsMap.set(character.id, hand);
-        await this.showRound(handsMap, currentDealerHand, 0);
-        return this.promptPlayerAction(character, hand, canUseTrait);
+        gameStateStore.logMessage(`NPC heuristic: ${character.name} used Shapeshifter Swap with Dealer's card.`);
+        await this.showRound(currentPlayerHands, currentDealerHand, currentTension);
+        return this.promptPlayerAction(character, hand, canUseTrait, context);
       }
 
       if (typeof decision === 'object' && decision.type === 'SMUGGLER_SWAP') {
         executeSmugglerSwap(character, hand);
         hasUsedSmugglerSwap = true;
-        gameStateStore.logMessage(`${character.name} used Smuggler Swap with their pocket card.`);
-        const handsMap = new Map<string, Card[]>();
-        handsMap.set(character.id, hand);
-        await this.showRound(handsMap, currentDealerHand, 0);
-        return this.promptPlayerAction(character, hand, canUseTrait);
+        gameStateStore.logMessage(`NPC heuristic: ${character.name} used Smuggler Swap with their pocket card.`);
+        await this.showRound(currentPlayerHands, currentDealerHand, currentTension);
+        return this.promptPlayerAction(character, hand, canUseTrait, context);
       }
 
       return decision;
@@ -194,21 +224,48 @@ export class CardTableOverlay implements TestUI {
     const hitBtn = document.getElementById('btn-hit') as HTMLButtonElement | null;
     const standBtn = document.getElementById('btn-stand') as HTMLButtonElement | null;
     const traitBtn = document.getElementById('btn-use-trait') as HTMLButtonElement | null;
+    const shapeshifterBtn = controls
+      ? this.getOrCreateActionButton(controls, 'btn-shapeshifter-swap', 'Shapeshift', 'Swap your last card with the Dealer face-up card', 'action-button--aptitude')
+      : null;
+    const smugglerBtn = controls
+      ? this.getOrCreateActionButton(controls, 'btn-smuggler-swap', 'Pocket Card', 'Swap your last card with your Smuggler pocket card', 'action-button--aptitude')
+      : null;
+    const weaponBtn = controls
+      ? this.getOrCreateActionButton(controls, 'btn-weapon-redraw', 'Weapon Redraw', 'Redraw your last combat card with a weapon', 'action-button--gear')
+      : null;
 
     if (controls) controls.style.display = 'flex';
-    if (traitBtn) traitBtn.disabled = !canUseTrait;
+    if (traitBtn) traitBtn.disabled = !availability.canUseTrait;
+    if (shapeshifterBtn) {
+      shapeshifterBtn.hidden = !availability.canUseShapeshifterSwap;
+      shapeshifterBtn.disabled = !availability.canUseShapeshifterSwap;
+    }
+    if (smugglerBtn) {
+      smugglerBtn.hidden = !availability.canUseSmugglerSwap;
+      smugglerBtn.disabled = !availability.canUseSmugglerSwap;
+    }
+    if (weaponBtn) {
+      weaponBtn.hidden = !availability.canUseWeaponRedraw;
+      weaponBtn.disabled = !availability.canUseWeaponRedraw;
+    }
 
     return new Promise((resolve) => {
       const cleanUp = () => {
         if (hitBtn) hitBtn.replaceWith(hitBtn.cloneNode(true));
         if (standBtn) standBtn.replaceWith(standBtn.cloneNode(true));
         if (traitBtn) traitBtn.replaceWith(traitBtn.cloneNode(true));
+        if (shapeshifterBtn) shapeshifterBtn.replaceWith(shapeshifterBtn.cloneNode(true));
+        if (smugglerBtn) smugglerBtn.replaceWith(smugglerBtn.cloneNode(true));
+        if (weaponBtn) weaponBtn.replaceWith(weaponBtn.cloneNode(true));
         if (controls) controls.style.display = 'none';
       };
 
       const bindHit = document.getElementById('btn-hit');
       const bindStand = document.getElementById('btn-stand');
       const bindTrait = document.getElementById('btn-use-trait');
+      const bindShapeshifter = document.getElementById('btn-shapeshifter-swap');
+      const bindSmuggler = document.getElementById('btn-smuggler-swap');
+      const bindWeapon = document.getElementById('btn-weapon-redraw');
 
       bindHit?.addEventListener('click', () => {
         cleanUp();
@@ -226,6 +283,30 @@ export class CardTableOverlay implements TestUI {
           cleanUp();
           resolve({ type: 'TRAIT', traitName: trait.name });
         }
+      });
+
+      bindShapeshifter?.addEventListener('click', async () => {
+        executeShapeshifterSwap(hand, currentDealerHand);
+        hasUsedShapeshifterSwap = true;
+        gameStateStore.logMessage(`${character.name} used Shapeshifter Swap with Dealer's card.`);
+        await this.showRound(currentPlayerHands, currentDealerHand, currentTension);
+        cleanUp();
+        resolve(this.promptPlayerAction(character, hand, canUseTrait, context));
+      });
+
+      bindSmuggler?.addEventListener('click', async () => {
+        executeSmugglerSwap(character, hand);
+        hasUsedSmugglerSwap = true;
+        gameStateStore.logMessage(`${character.name} used Smuggler Swap with their pocket card.`);
+        await this.showRound(currentPlayerHands, currentDealerHand, currentTension);
+        cleanUp();
+        resolve(this.promptPlayerAction(character, hand, canUseTrait, context));
+      });
+
+      bindWeapon?.addEventListener('click', () => {
+        if (!availability.weaponForRedraw) return;
+        cleanUp();
+        resolve({ type: 'GEAR', gear: availability.weaponForRedraw, action: 'REDRAW_LAST_CARD' });
       });
     });
   }

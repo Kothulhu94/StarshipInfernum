@@ -44,12 +44,16 @@ export interface MajorCrisisState {
   jokersTotal: number;
   isUnlocked: boolean; // True once all jokers are removed and we can resolve the crisis card itself
   isResolved: boolean;
+  completedStepRoomIds?: string[];
+  finalResolutionRoomId?: string;
 }
 
 export interface MinorCrisisState {
   id: MinorCrisisType;
   jokersRemaining: number; // Shuffled into the deck or held on card
   isResolved: boolean;
+  completedStepRoomIds?: string[];
+  finalResolutionRoomId?: string;
 }
 
 export interface CrisisClockState {

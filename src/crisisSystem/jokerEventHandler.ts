@@ -35,13 +35,14 @@ export function setupCrisesAndJokers(
     majorCard = { suit: Suit.SPADES, rank: 'A', faceUp: true };
   }
 
-  // Find and remove a random card (e.g. a 10 or King) for the Minor Crisis
-  let minorCard: Card | null = null;
-  // Let's remove a King
-  for (const suit of suits) {
-    minorCard = survivalDeck.removeCard('K', suit);
-    if (minorCard) break;
-  }
+  // Find and remove a random non-Ace card for the Minor Crisis.
+  const deckCards = (survivalDeck as any).cards as Card[];
+  const minorCardCandidates = deckCards
+    .map((card, index) => ({ card, index }))
+    .filter(({ card }) => !card.isJoker && card.rank !== 'A');
+  const selectedMinorCard = minorCardCandidates[Math.floor(Math.random() * minorCardCandidates.length)];
+  const minorCardIndex = selectedMinorCard?.index ?? -1;
+  let minorCard: Card | null = minorCardIndex >= 0 ? deckCards.splice(minorCardIndex, 1)[0] : null;
   if (!minorCard) {
     minorCard = { suit: Suit.DIAMONDS, rank: 'K', faceUp: true };
   }
@@ -57,21 +58,23 @@ export function setupCrisesAndJokers(
   // 1 Joker on Minor Crisis
   const minorJokers = 1;
 
-  // Rest on Major Crisis
-  const majorJokers = Math.max(1, totalJokers - 2);
+  // Rest on Major Crisis. With two PCs, the Major starts ready for its final card test.
+  const majorJokers = Math.max(0, totalJokers - 2);
 
   const majorState: MajorCrisisState = {
     id: majorId,
     jokersRemaining: majorJokers,
     jokersTotal: majorJokers,
     isUnlocked: majorJokers === 0, // Unlocked immediately if 0 jokers
-    isResolved: false
+    isResolved: false,
+    completedStepRoomIds: []
   };
 
   const minorState: MinorCrisisState = {
     id: minorId,
     jokersRemaining: minorJokers,
-    isResolved: false
+    isResolved: false,
+    completedStepRoomIds: []
   };
 
   return {

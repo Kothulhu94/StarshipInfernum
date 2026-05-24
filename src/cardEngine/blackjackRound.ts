@@ -1,6 +1,12 @@
 import { Card } from './cardDefinitions';
 import { Deck } from './deckManager';
 import { evaluateHand, HandResult } from './handEvaluator';
+import {
+  comparePlayerAndDealer,
+  evaluatePlayerHand,
+  revealDealerHoleCard,
+  shouldDealerHit
+} from './blackjackTestSemantics';
 
 export type RoundOutcome = 'WIN' | 'LOSE' | 'PUSH' | 'BUST';
 
@@ -70,18 +76,8 @@ export class BlackjackRound {
    */
   public evaluatePlayer(playerId: string): HandResult {
     const hand = this.getPlayerHand(playerId);
-    const result = evaluateHand(hand);
     const mod = this.playerModifiers.get(playerId) || 0;
-    
-    let total = result.total + mod;
-    let isBust = total > 21;
-
-    return {
-      total,
-      isSoft: result.isSoft,
-      isBust,
-      isNatural21: result.isNatural21 && mod === 0
-    };
+    return evaluatePlayerHand(hand, mod);
   }
 
   /**
@@ -131,27 +127,16 @@ export class BlackjackRound {
    * @param targetScore The score the dealer is trying to beat (ignored if isGroupTest is true).
    */
   public playDealer(isGroupTest: boolean = false, targetScore: number = 0): HandResult {
-    // Reveal face-down card
-    if (this.dealerHand.length > 0) {
-      this.dealerHand[0].faceUp = true;
-    }
+    revealDealerHoleCard(this.dealerHand);
 
     let dealerEval = evaluateHand(this.dealerHand);
+    const mode = isGroupTest ? 'stand-on-17' : 'solo-target';
 
-    if (isGroupTest) {
-      while (dealerEval.total <= 16) {
-        const card = this.deck.draw();
-        card.faceUp = true;
-        this.dealerHand.push(card);
-        dealerEval = evaluateHand(this.dealerHand);
-      }
-    } else {
-      while (dealerEval.total < targetScore && dealerEval.total < 21) {
-        const card = this.deck.draw();
-        card.faceUp = true;
-        this.dealerHand.push(card);
-        dealerEval = evaluateHand(this.dealerHand);
-      }
+    while (shouldDealerHit(dealerEval, mode, targetScore)) {
+      const card = this.deck.draw();
+      card.faceUp = true;
+      this.dealerHand.push(card);
+      dealerEval = evaluateHand(this.dealerHand);
     }
 
     return dealerEval;
@@ -166,19 +151,7 @@ export class BlackjackRound {
 
     for (const [playerId, _hand] of this.playerHands) {
       const playerEval = this.evaluatePlayer(playerId);
-      let outcome: RoundOutcome = 'LOSE';
-
-      if (playerEval.isBust) {
-        outcome = 'BUST';
-      } else if (dealerEval.isBust) {
-        outcome = 'WIN';
-      } else if (playerEval.total > dealerEval.total) {
-        outcome = 'WIN';
-      } else if (playerEval.total < dealerEval.total) {
-        outcome = 'LOSE';
-      } else {
-        outcome = 'PUSH';
-      }
+      const outcome = comparePlayerAndDealer(playerEval, dealerEval);
 
       results.set(playerId, {
         playerId,

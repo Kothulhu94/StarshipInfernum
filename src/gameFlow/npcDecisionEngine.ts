@@ -3,10 +3,9 @@ import { Card, cardValue } from '@cardEngine/cardDefinitions';
 import { evaluateHand } from '@cardEngine/handEvaluator';
 import {
   canShapeshifterSwap,
-  executeShapeshifterSwap,
   canSmugglerSwap,
-  executeSmugglerSwap
 } from '@characterSystem/aptitudeExecutor';
+import { PlayerAction } from '@characterSystem/playerActionModel';
 
 export interface NPCDecisionContext {
   playerHand: Card[];
@@ -16,12 +15,7 @@ export interface NPCDecisionContext {
   hasUsedSmugglerSwap: boolean;
 }
 
-export type NPCDecisionResult =
-  | 'HIT'
-  | 'STAND'
-  | { type: 'TRAIT'; traitName: string }
-  | { type: 'SHAPESHIFTER_SWAP' }
-  | { type: 'SMUGGLER_SWAP' };
+export type NPCDecisionResult = PlayerAction;
 
 /**
  * Heuristic engine for AI NPC blackjack actions, trait usage, and swaps.

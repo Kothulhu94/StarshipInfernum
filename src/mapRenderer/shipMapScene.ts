@@ -177,6 +177,7 @@ export class ShipMapScene extends Phaser.Scene {
     this.graphics.clear();
 
     const roomsOnDeck = this.graph.getRoomsOnDeck(this.currentDeck);
+    console.log("RENDER MAP roomsOnDeck:", roomsOnDeck.map(r => ({ id: r.id, name: r.name, x: r.x, y: r.y, z: r.z })));
     const corridorsOnDeck = Array.from(this.graph.corridors.values()).filter(
       (c) => c.tiles[0]?.z === this.currentDeck
     );
@@ -189,7 +190,7 @@ export class ShipMapScene extends Phaser.Scene {
     // 2. Paint room interiors
     for (const room of roomsOnDeck) {
       if (room.isDiscovered) {
-        paintRoom(this.graphics, room);
+        paintRoom(this.graphics, room, this.activeRoomId);
       }
     }
 

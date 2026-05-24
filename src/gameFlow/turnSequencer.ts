@@ -7,12 +7,36 @@ import { runCrisisTest } from '@encounterSystem/crisisTestRunner';
 import { runDisasterTest } from '@crisisSystem/disasterResolver';
 import { runSimpleTest } from '@encounterSystem/simpleTestRunner';
 import { onCrisisTestSuccess, onCrisisTestBust, resolveCrisisCard } from '@crisisSystem/jokerEventHandler';
-import { RoomNode, DoorDirection } from '@mapGenerator/mapLayoutTypes';
+import {
+  recordFinalCrisisResolution,
+  recordSuccessfulCrisisStep,
+  selectCrisisAttemptTarget
+} from '@crisisSystem/crisisAttemptRules';
+import { DoorDirection } from '@mapGenerator/mapLayoutTypes';
 import { ShipLayoutBuilder } from '@mapGenerator/shipLayoutBuilder';
-import { Deck } from '@cardEngine/deckManager';
+import {
+  createRoomObstacleDrawState,
+  getObstacleCardCode,
+  getRoomCardCode,
+  hasBlockingObstacle
+} from '@mapGenerator/roomObstacleState';
 import { Card } from '@cardEngine/cardDefinitions';
 import { TestUI, TestResult } from '@encounterSystem/encounterTypes';
 import { Character } from '@characterSystem/characterTypes';
+import { endGame } from './gameOverHandler';
+import { getDecksFromState, saveDecksToState, instrumentDecks } from './deckStateSynchronizer';
+import { OBSTACLE_REGISTRY } from '@encounterSystem/obstacleRegistry';
+import { shouldRoomObstacleClear } from '@encounterSystem/obstacleSpecialRuleEffects';
+
+function cardCodeToCard(cardCode: string): Card {
+  const rank = cardCode.substring(0, cardCode.length - 1) as any;
+  const suitLetter = cardCode.charAt(cardCode.length - 1);
+  let suit = 'SPADES';
+  if (suitLetter === 'H') suit = 'HEARTS';
+  if (suitLetter === 'D') suit = 'DIAMONDS';
+  if (suitLetter === 'C') suit = 'CLUBS';
+  return { suit: suit as any, rank, faceUp: true };
+}
 
 export class TurnSequencer {
   private lastDrawnROCardCode: string | null = null;
@@ -31,111 +55,6 @@ export class TurnSequencer {
   }
 
   /**
-   * Helper to instantiate Deck classes from the current state arrays.
-   */
-  private getDecksFromState(): { survivalDeck: Deck; roDeck: Deck } {
-    const state = gameStateStore.getState();
-    const survivalDeck = new Deck(true);
-    (survivalDeck as any).cards = state.survivalDeckCards;
-
-    const roDeck = new Deck(false);
-    (roDeck as any).cards = state.roDeckCards;
-
-    return { survivalDeck, roDeck };
-  }
-
-  /**
-   * Helper to write Deck states back to the game state store.
-   */
-  private saveDecksToState(survivalDeck: Deck, roDeck: Deck): void {
-    gameStateStore.updateState((state) => {
-      state.survivalDeckCards = (survivalDeck as any).cards;
-      state.roDeckCards = (roDeck as any).cards;
-    });
-  }
-
-  private getDisplayResult(
-    testResult: TestResult | Map<string, TestResult>,
-    preferredCharacterId?: string
-  ): TestResult {
-    if (!(testResult instanceof Map)) {
-      return testResult;
-    }
-
-    const preferred = preferredCharacterId ? testResult.get(preferredCharacterId) : undefined;
-    if (preferred) {
-      return preferred;
-    }
-
-    return Array.from(testResult.values())[0] || {
-      outcome: 'PUSH',
-      finalPlayerTotal: 0,
-      finalDealerTotal: 0,
-      traitsExhausted: [],
-    };
-  }
-
-  /**
-   * Intercepts deck drawing to catch empty decks (reshuffles) and Joker draws.
-   */
-  private instrumentDecks(survivalDeck: Deck, roDeck: Deck): { jokerDrawnThisStep: boolean } {
-    const trigger = { jokerDrawnThisStep: false };
-    const originalSurvivalDraw = survivalDeck.draw;
-
-    survivalDeck.draw = () => {
-      if (survivalDeck.getRemainingCount() === 0) {
-        this.handleSurvivalDeckReshuffle(survivalDeck);
-      }
-      const card = originalSurvivalDraw.call(survivalDeck);
-      if (card && card.isJoker) {
-        trigger.jokerDrawnThisStep = true;
-        gameStateStore.updateState((state) => {
-          if (!state.drawnJokers.some((c) => c.suit === card.suit && c.rank === card.rank)) {
-            state.drawnJokers.push(card);
-          }
-        });
-      }
-      return card;
-    };
-
-    return trigger;
-  }
-
-  /**
-   * Processes a Survival Deck reshuffle, updating clock tokens and shuffles Jokers back in.
-   */
-  private handleSurvivalDeckReshuffle(survivalDeck: Deck): void {
-    gameStateStore.updateState((state) => {
-      if (state.crisisClockTokensRemaining > 0) {
-        state.crisisClockTokensRemaining--;
-        gameStateStore.logMessage(
-          `Survival Deck reshuffled! Removed 1 token from Crisis Clock. Remaining tokens: ${state.crisisClockTokensRemaining}`
-        );
-        gameEventBus.emit('clock_ticked', {
-          remaining: state.crisisClockTokensRemaining,
-          total: state.crisisClockTokensTotal,
-        });
-
-        if (state.crisisClockTokensRemaining === 0) {
-          gameStateStore.logMessage('Crisis Clock empty. Time expired!');
-          this.endGame(false, 'Crisis Clock tokens exhausted. The ship was lost.');
-          return;
-        }
-      }
-
-      // Return drawn Jokers back into the deck face up
-      if (state.drawnJokers.length > 0) {
-        const deckCards = (survivalDeck as any).cards as Card[];
-        for (const joker of state.drawnJokers) {
-          deckCards.push({ ...joker, faceUp: true });
-        }
-        state.drawnJokers = [];
-        survivalDeck.shuffle();
-      }
-    });
-  }
-
-  /**
    * Gets the currently active character.
    */
   public getActiveCharacter(): Character | null {
@@ -150,7 +69,7 @@ export class TurnSequencer {
     const state = gameStateStore.getState();
     const living = state.characters.filter((c) => !c.isDead);
     if (living.length === 0) {
-      this.endGame(false, 'All crew members have perished.');
+      endGame(false, 'All crew members have perished.');
       return;
     }
 
@@ -176,14 +95,14 @@ export class TurnSequencer {
 
     if (!activeChar || state.gamePhase !== 'EXPLORING') return;
 
-    const currentRoomId = state.activeRoomId;
-    if (!currentRoomId || !graph.areConnected(currentRoomId, toRoomId)) {
-      gameStateStore.logMessage(`Rooms are not directly connected.`);
-      return;
-    }
-
     const targetRoom = graph.getRoom(toRoomId);
     if (!targetRoom) return;
+
+    const currentRoomId = state.activeRoomId;
+    if (!currentRoomId || !graph.areConnected(currentRoomId, toRoomId)) {
+      gameStateStore.logMessage(`Room: ${targetRoom.name}.`);
+      return;
+    }
 
     gameStateStore.updateState((s) => {
       s.activeRoomId = toRoomId;
@@ -196,8 +115,7 @@ export class TurnSequencer {
     saveLoadManager.saveGame('autosave');
 
     // Check if the target room has an unresolved obstacle
-    const hasObstacle = targetRoom.cardCode && !targetRoom.isDiscovered; // wait, if not discovered, obstacle is active
-    if (hasObstacle) {
+    if (hasBlockingObstacle(targetRoom)) {
       phaseStateMachine.transitionTo('OBSTACLE');
     }
   }
@@ -212,19 +130,23 @@ export class TurnSequencer {
 
     if (!activeChar || state.gamePhase !== 'EXPLORING' || !state.activeRoomId) return;
 
-    const { survivalDeck, roDeck } = this.getDecksFromState();
+    const { survivalDeck, roDeck } = getDecksFromState();
 
-    // Draw card to determine room & obstacle
-    const drawnCard = roDeck.draw();
-    const drawnCardCode = getCardCode(drawnCard);
+    // Draw separate R&O cards: first for room identity, second for obstacle identity.
+    const roomCard = roDeck.draw();
+    const obstacleCard = roDeck.draw();
+    const roomCardCode = getCardCode(roomCard);
+    const obstacleCardCode = getCardCode(obstacleCard);
 
     // Grow map graph
     const layoutBuilder = new ShipLayoutBuilder();
-    const newRoom = layoutBuilder.discoverRoom(graph, state.activeRoomId, doorDirection, drawnCardCode);
+    console.log("BEFORE EXPLORE rooms in graph:", Array.from(graph.rooms.keys()));
+    const newRoom = layoutBuilder.discoverRoom(graph, state.activeRoomId, doorDirection, roomCardCode, obstacleCardCode);
+    console.log("AFTER EXPLORE rooms in graph:", Array.from(graph.rooms.keys()));
 
     if (!newRoom) {
       gameStateStore.logMessage(`Could not grow room in direction: ${doorDirection} (blocked or out of bounds).`);
-      this.saveDecksToState(survivalDeck, roDeck);
+      saveDecksToState(survivalDeck, roDeck);
       return;
     }
 
@@ -239,20 +161,25 @@ export class TurnSequencer {
     );
 
     // Save decks back
-    this.saveDecksToState(survivalDeck, roDeck);
+    saveDecksToState(survivalDeck, roDeck);
 
-    // Check for crisis card match: does drawnCardCode match previous drawn card rank/suit?
-    let matchTriggered = false;
+    if (newRoom.roomObstacleDraw?.isRankMatch || newRoom.roomObstacleDraw?.isSuitMatch) {
+      gameStateStore.logMessage('Room and obstacle cards match for a crisis opportunity.');
+    }
+
+    // Check for crisis card match: does roomCardCode match previous drawn room card rank/suit?
     if (this.lastDrawnROCardCode) {
-      const currentRank = drawnCard.rank;
-      const currentSuit = drawnCard.suit;
+      const currentRank = roomCard.rank;
+      const currentSuit = roomCard.suit;
       const prevRank = this.lastDrawnROCardCode[0];
       const prevSuit = this.lastDrawnROCardCode[1]; // approximate check
       if (currentRank === prevRank || currentSuit[0] === prevSuit) {
-        matchTriggered = true;
+        gameStateStore.logMessage('Crisis match detected!');
       }
     }
-    this.lastDrawnROCardCode = drawnCardCode;
+    this.lastDrawnROCardCode = roomCardCode;
+
+    const obstacleName = OBSTACLE_REGISTRY[obstacleCardCode]?.name || newRoom.name;
 
     // Trigger narrative router
     gameEventBus.emit('narrative_triggered', {
@@ -262,7 +189,7 @@ export class TurnSequencer {
         characterName: activeChar.name,
         characterTraits: activeChar.traits.map((t) => t.name),
         roomName: newRoom.name,
-        obstacleName: newRoom.name,
+        obstacleName,
       },
     });
 
@@ -292,11 +219,11 @@ export class TurnSequencer {
     const hasDeadCrew = state.characters.some((c) => c.isDead);
     if (hasDeadCrew) {
       gameStateStore.logMessage(`Crewmates have died. Recovering a trait requires passing a Simple Test with automatic Rising Tension.`);
-      const { survivalDeck, roDeck } = this.getDecksFromState();
+      const { survivalDeck, roDeck } = getDecksFromState();
       
       // Simple test with +1 tension card count (simulated via 1 starting tension in SimpleTest)
-      const result = await runSimpleTest(activeChar, roDeck, ui);
-      this.saveDecksToState(survivalDeck, roDeck);
+      const result = await runSimpleTest(activeChar, roDeck, ui, 1);
+      saveDecksToState(survivalDeck, roDeck);
       await ui.showTestResult(result);
 
       if (result.outcome !== 'WIN') {
@@ -332,32 +259,23 @@ export class TurnSequencer {
     if (!activeChar || state.gamePhase !== 'OBSTACLE' || !state.activeRoomId) return;
 
     const currentRoom = graph.getRoom(state.activeRoomId);
-    if (!currentRoom || !currentRoom.cardCode) {
+    const obstacleCardCode = currentRoom ? getObstacleCardCode(currentRoom) : undefined;
+    if (!currentRoom || !obstacleCardCode) {
       phaseStateMachine.transitionTo('EXPLORING');
       return;
     }
 
-    const { survivalDeck, roDeck } = this.getDecksFromState();
-    const trigger = this.instrumentDecks(survivalDeck, roDeck);
+    const { survivalDeck, roDeck } = getDecksFromState();
+    const trigger = instrumentDecks(survivalDeck);
 
-    // Card drawn from RO deck representing the room's card code
-    const rank = currentRoom.cardCode.substring(0, currentRoom.cardCode.length - 1) as any;
-    const suitLetter = currentRoom.cardCode.charAt(currentRoom.cardCode.length - 1);
-    let suit = 'SPADES';
-    if (suitLetter === 'H') suit = 'HEARTS';
-    if (suitLetter === 'D') suit = 'DIAMONDS';
-    if (suitLetter === 'C') suit = 'CLUBS';
-
-    const obstacleCard: Card = {
-      suit: suit as any,
-      rank,
-      faceUp: true,
-    };
+    const obstacleCard = cardCodeToCard(obstacleCardCode);
 
     const otherPlayers = state.characters.filter((c) => c.id !== activeChar.id);
     const deadPCs = state.characters.filter((c) => c.isDead);
 
-    gameStateStore.logMessage(`Encountering obstacle: ${currentRoom.name} (${currentRoom.cardCode})`);
+    const roomCardCode = getRoomCardCode(currentRoom) || obstacleCardCode;
+    const obstacleName = OBSTACLE_REGISTRY[obstacleCardCode]?.name || currentRoom.name;
+    gameStateStore.logMessage(`Encountering obstacle: ${obstacleName} (${obstacleCardCode}) in ${currentRoom.name} (${roomCardCode})`);
     phaseStateMachine.transitionTo('TEST');
 
     let testResult: TestResult | Map<string, TestResult>;
@@ -377,28 +295,39 @@ export class TurnSequencer {
       testResult = { outcome: 'WIN', finalPlayerTotal: 21, finalDealerTotal: 0, traitsExhausted: [] };
     }
 
-    this.saveDecksToState(survivalDeck, roDeck);
-    await ui.showTestResult(this.getDisplayResult(testResult, activeChar.id));
+    saveDecksToState(survivalDeck, roDeck);
+    
+    // Helper logic moved here for simplicity in this file
+    const getDisplayResult = (res: TestResult | Map<string, TestResult>): TestResult => {
+      if (!(res instanceof Map)) return res;
+      const preferred = activeChar.id ? res.get(activeChar.id) : undefined;
+      return preferred || Array.from(res.values())[0] || {
+        outcome: 'PUSH',
+        finalPlayerTotal: 0,
+        finalDealerTotal: 0,
+        traitsExhausted: [],
+      };
+    };
+    await ui.showTestResult(getDisplayResult(testResult));
 
-    // Check if test resulted in win or bust
-    let isBust = false;
-    let isWin = false;
+    const obstacleDefinition = OBSTACLE_REGISTRY[obstacleCardCode];
+    const isCleared = obstacleDefinition
+      ? shouldRoomObstacleClear(obstacleDefinition, testResult)
+      : true;
 
-    if (testResult instanceof Map) {
-      // Group Test results
-      isWin = Array.from(testResult.values()).some((r) => r.outcome === 'WIN');
-      isBust = Array.from(testResult.values()).some((r) => r.outcome === 'BUST');
+    if (isCleared) {
+      gameStateStore.updateState(() => {
+        currentRoom.isObstacleCleared = true;
+        currentRoom.obstacleState = 'cleared';
+      });
     } else {
-      isWin = testResult.outcome === 'WIN';
-      isBust = testResult.outcome === 'BUST';
+      gameStateStore.updateState(() => {
+        currentRoom.isObstacleCleared = false;
+        currentRoom.obstacleState = 'unresolved';
+      });
     }
 
-    // Mark room as completely discovered/cleared
-    gameStateStore.updateState(() => {
-      currentRoom.isDiscovered = true;
-    });
-
-    gameStateStore.logMessage(isWin ? `Obstacle successfully cleared.` : `Failed to clear obstacle.`);
+    gameStateStore.logMessage(isCleared ? `Obstacle successfully cleared.` : `Obstacle remains unresolved.`);
 
     // If Joker was drawn, resolve the Disaster immediately
     if (trigger.jokerDrawnThisStep) {
@@ -410,7 +339,7 @@ export class TurnSequencer {
 
       const dRes = await runDisasterTest(disasterPlayers, disasterDead, roDeck, ui);
       gameStateStore.logMessage(dRes.resolved ? 'Disaster averted!' : 'Disaster ended in failure.');
-      this.saveDecksToState(survivalDeck, roDeck);
+      saveDecksToState(survivalDeck, roDeck);
       await ui.showTestResult({
         outcome: dRes.resolved ? 'WIN' : 'LOSE',
         finalPlayerTotal: 0,
@@ -423,7 +352,7 @@ export class TurnSequencer {
     // Check if everyone is dead
     const allDead = state.characters.every((c) => c.isDead);
     if (allDead) {
-      this.endGame(false, 'The entire crew has perished.');
+      endGame(false, 'The entire crew has perished.');
       return;
     }
 
@@ -450,63 +379,67 @@ export class TurnSequencer {
       return false;
     }
 
-    // Check if active crisis resolution room matches current room name
-    const matchesMajor = state.majorCrisisState && !state.majorCrisisState.isResolved;
-    const matchesMinor = state.minorCrisisState && !state.minorCrisisState.isResolved;
-
-    if (!matchesMajor && !matchesMinor) {
-      gameStateStore.logMessage('No active unresolved crises to resolve.');
+    const attemptDecision = selectCrisisAttemptTarget(state, currentRoom);
+    if (!attemptDecision.target) {
+      gameStateStore.logMessage(attemptDecision.reason || 'No active unresolved crises to resolve.');
       return false;
     }
+    const target = attemptDecision.target;
 
-    gameStateStore.logMessage(`${activeChar.name} attempts to resolve a crisis step...`);
+    gameStateStore.logMessage(`${activeChar.name} attempts to resolve a ${target.type.toLowerCase()} crisis step...`);
     phaseStateMachine.transitionTo('CRISIS_TEST');
 
-    const { survivalDeck, roDeck } = this.getDecksFromState();
+    const { survivalDeck, roDeck } = getDecksFromState();
     const result = await runCrisisTest(activeChar, roDeck, ui);
-    this.saveDecksToState(survivalDeck, roDeck);
+    saveDecksToState(survivalDeck, roDeck);
     await ui.showTestResult(result.details);
 
     this.crisisTestCountPerRoom.set(currentRoom.id, count + 1);
 
     if (result.outcome === 'SUCCESS') {
       gameStateStore.updateState((s) => {
-        // Resolve step for either major or minor
-        if (s.majorCrisisState && s.majorCrisisState.jokersRemaining > 0) {
-          onCrisisTestSuccess(s.majorCrisisState);
-          gameStateStore.logMessage(`Success! Removed 1 Joker from Major Crisis. Remaining: ${s.majorCrisisState.jokersRemaining}`);
-          
-          if (s.majorCrisisState.jokersRemaining === 0 && s.majorCrisisCard) {
-            // Final crisis card resolution
-            resolveCrisisCard(s.majorCrisisState, s.majorCrisisCard, survivalDeck);
-            gameStateStore.logMessage(`Major Crisis resolved completely!`);
-            this.endGame(true, 'The Major Crisis has been resolved. You survived!');
-            return;
+        const currentTarget = target.type === 'MAJOR' ? s.majorCrisisState : s.minorCrisisState;
+        const crisisCard = target.type === 'MAJOR' ? s.majorCrisisCard : s.minorCrisisCard;
+        if (!currentTarget) return;
+
+        if (target.isFinalCardTest && crisisCard) {
+          recordFinalCrisisResolution(currentTarget, currentRoom.id);
+          resolveCrisisCard(currentTarget, crisisCard, survivalDeck);
+          gameStateStore.logMessage(`${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis resolved completely!`);
+          if (target.type === 'MAJOR') {
+            endGame(true, 'The Major Crisis has been resolved. You survived!');
           }
-        } else if (s.minorCrisisState && s.minorCrisisState.jokersRemaining > 0) {
-          onCrisisTestSuccess(s.minorCrisisState);
-          gameStateStore.logMessage(`Success! Removed 1 Joker from Minor Crisis. Remaining: ${s.minorCrisisState.jokersRemaining}`);
-          
-          if (s.minorCrisisState.jokersRemaining === 0 && s.minorCrisisCard) {
-            resolveCrisisCard(s.minorCrisisState, s.minorCrisisCard, survivalDeck);
-            gameStateStore.logMessage(`Minor Crisis resolved!`);
-          }
+          return;
         }
+
+        onCrisisTestSuccess(currentTarget);
+        recordSuccessfulCrisisStep(currentTarget, currentRoom.id);
+        gameStateStore.logMessage(
+          `Success! Removed 1 Joker from ${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis. Remaining: ${currentTarget.jokersRemaining}`
+        );
       });
+      saveDecksToState(survivalDeck, roDeck);
     } else if (result.outcome === 'BUST') {
       gameStateStore.updateState((s) => {
-        if (s.majorCrisisState && s.majorCrisisState.jokersRemaining > 0) {
-          onCrisisTestBust(s.majorCrisisState, survivalDeck);
-          gameStateStore.logMessage(`Bust! Major Crisis Joker shuffled back into the Survival Deck.`);
-        } else if (s.minorCrisisState && s.minorCrisisState.jokersRemaining > 0) {
-          onCrisisTestBust(s.minorCrisisState, survivalDeck);
-          gameStateStore.logMessage(`Bust! Minor Crisis Joker shuffled back into the Survival Deck.`);
+        const currentTarget = target.type === 'MAJOR' ? s.majorCrisisState : s.minorCrisisState;
+        if (currentTarget && currentTarget.jokersRemaining > 0) {
+          onCrisisTestBust(currentTarget, survivalDeck);
+          gameStateStore.logMessage(`Bust! ${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis Joker shuffled back into the Survival Deck.`);
         }
       });
-      this.saveDecksToState(survivalDeck, roDeck);
+      this.crisisTestCountPerRoom.set(currentRoom.id, 3);
+      saveDecksToState(survivalDeck, roDeck);
     } else {
       gameStateStore.logMessage('Crisis resolution attempt failed.');
-      // Draw new obstacle on fail
+      const newObstacleCard = roDeck.draw();
+      const newObstacleCardCode = getCardCode(newObstacleCard);
+      const roomCardCode = getRoomCardCode(currentRoom) || currentRoom.cardCode || newObstacleCardCode;
+      currentRoom.obstacleCardCode = newObstacleCardCode;
+      currentRoom.roomObstacleDraw = createRoomObstacleDrawState(roomCardCode, newObstacleCardCode);
+      currentRoom.isObstacleCleared = false;
+      currentRoom.obstacleState = 'unresolved';
+      saveDecksToState(survivalDeck, roDeck);
+      gameStateStore.logMessage(`A new obstacle appears in this room: ${newObstacleCardCode}.`);
       phaseStateMachine.transitionTo('OBSTACLE');
       return false;
     }
@@ -514,15 +447,6 @@ export class TurnSequencer {
     phaseStateMachine.transitionTo('EXPLORING');
     this.advanceTurn();
     return true;
-  }
-
-  /**
-   * Helper to flag game over.
-   */
-  private endGame(win: boolean, details: string): void {
-    phaseStateMachine.transitionTo('GAME_OVER');
-    gameStateStore.logMessage(`GAME OVER: ${win ? 'VICTORY' : 'DEFEAT'} - ${details}`);
-    gameEventBus.emit('game_over', { win, details });
   }
 }
 

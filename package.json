@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "verify:rules": "vite build --ssr src/qualityAssurance/ruleRegressionSmokeCommand.ts --outDir dist-quality --emptyOutDir && node dist-quality/ruleRegressionSmokeCommand.js",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -42,6 +42,16 @@ export interface RoomTemplate {
   featureMarkers: FeatureMarker[];
 }
 
+export type ObstacleClearanceState = 'unresolved' | 'bypassed' | 'cleared' | 'persistent' | 'sealed';
+
+export interface RoomObstacleDrawState {
+  roomCardCode: string;
+  obstacleCardCode: string;
+  isRankMatch: boolean;
+  isSuitMatch: boolean;
+  isDouble: boolean;
+}
+
 export interface WorldDoor {
   id: string; // Unique door ID format: "room_id:direction"
   x: number; // World x position on the tile grid
@@ -54,7 +64,11 @@ export interface WorldDoor {
 export interface RoomNode {
   id: string; // Unique room ID (usually roomName + index or unique token)
   name: string; // Display name
-  cardCode?: string; // The R&O card code that spawned this room
+  cardCode?: string; // Legacy room card code kept for saved-game compatibility
+  roomCardCode?: string; // The R&O card code that spawned this room identity
+  obstacleCardCode?: string; // The R&O card code that spawned this room's obstacle
+  obstacleState?: ObstacleClearanceState;
+  roomObstacleDraw?: RoomObstacleDrawState;
   roomType: string;
   x: number; // Top-left world coordinate X on tile grid
   y: number; // Top-left world coordinate Y on tile grid
@@ -71,6 +85,7 @@ export interface RoomNode {
     special?: boolean;
   };
   isDiscovered: boolean;
+  isObstacleCleared: boolean;
 }
 
 export interface Corridor {

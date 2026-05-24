@@ -5,6 +5,7 @@ import { Character } from '@characterSystem/characterTypes';
 import { TestUI } from '@encounterSystem/encounterTypes';
 import { damageTrait } from '@characterSystem/traitManager';
 import { canSurvivorSlink } from '@characterSystem/aptitudeExecutor';
+import { canUseTraitModifier } from '@characterSystem/playerActionModel';
 import { gameStateStore } from '@gameFlow/gameStateStore';
 
 export interface DisasterResult {
@@ -110,7 +111,8 @@ export async function runDisasterTest(
       const traitsExhausted = playerTraitsExhausted.get(p.id)!;
 
       while (!stand && !pEval.isBust) {
-        const action = await ui.promptPlayerAction(p, pHand, appliedTraitModifier === 0);
+        const canApplyTrait = canUseTraitModifier(p, appliedTraitModifier === 0);
+        const action = await ui.promptPlayerAction(p, pHand, canApplyTrait);
 
         if (action === 'HIT') {
           const card = roDeck.draw();
@@ -126,7 +128,9 @@ export async function runDisasterTest(
         } else if (action === 'STAND') {
           stand = true;
         } else if (typeof action === 'object' && action.type === 'TRAIT') {
-          const trait = p.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted);
+          const trait = canApplyTrait
+            ? p.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted)
+            : undefined;
           if (trait) {
             trait.exhausted = true;
             traitsExhausted.push(trait.name);
@@ -146,12 +150,14 @@ export async function runDisasterTest(
       }
 
       // Mitigate bust with trait
-      if (pEval.isBust && appliedTraitModifier === 0) {
+      if (pEval.isBust && canUseTraitModifier(p, appliedTraitModifier === 0)) {
         const availableTraits = p.traits.filter(t => !t.exhausted && !t.busted);
         if (availableTraits.length > 0) {
           const action = await ui.promptPlayerAction(p, pHand, true);
           if (typeof action === 'object' && action.type === 'TRAIT') {
-            const trait = p.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted);
+            const trait = canUseTraitModifier(p, true)
+              ? p.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted)
+              : undefined;
             if (trait) {
               trait.exhausted = true;
               traitsExhausted.push(trait.name);

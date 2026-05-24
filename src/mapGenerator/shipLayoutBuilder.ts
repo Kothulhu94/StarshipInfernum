@@ -10,6 +10,7 @@ import { RoomNode, WorldDoor, Corridor, DoorDirection, DoorSlot } from './mapLay
 import { RoomNodeGraph } from './roomNodeGraph';
 import { getRoomDefinitionForCard, getRoomTemplateForCard } from './deckToRoomMapper';
 import { planCorridor } from './corridorPlanner';
+import { createRoomObstacleDrawState } from './roomObstacleState';
 
 /**
  * Returns the opposite door direction
@@ -48,10 +49,19 @@ function doesOverlap(
 /**
  * Instantiates a RoomNode at world coordinates
  */
+function getNextRoomId(graph: RoomNodeGraph): string {
+  let nextIdIndex = graph.rooms.size;
+  while (graph.rooms.has(`room_${nextIdIndex}`)) {
+    nextIdIndex++;
+  }
+  return `room_${nextIdIndex}`;
+}
+
 function instantiateRoomNode(
   id: string,
   name: string,
-  cardCode: string,
+  roomCardCode: string,
+  obstacleCardCode: string | undefined,
   roomType: string,
   width: number,
   height: number,
@@ -60,7 +70,8 @@ function instantiateRoomNode(
   features: any,
   x: number,
   y: number,
-  z: number
+  z: number,
+  isObstacleCleared: boolean
 ): RoomNode {
   const doors: WorldDoor[] = doorSlots.map((slot) => ({
     id: `${id}:${slot.direction}`,
@@ -73,7 +84,13 @@ function instantiateRoomNode(
   return {
     id,
     name,
-    cardCode,
+    cardCode: roomCardCode,
+    roomCardCode,
+    obstacleCardCode,
+    obstacleState: isObstacleCleared ? 'cleared' : 'unresolved',
+    roomObstacleDraw: obstacleCardCode
+      ? createRoomObstacleDrawState(roomCardCode, obstacleCardCode)
+      : undefined,
     roomType,
     x,
     y,
@@ -84,12 +101,11 @@ function instantiateRoomNode(
     doors,
     features,
     isDiscovered: true,
+    isObstacleCleared,
   };
 }
 
 export class ShipLayoutBuilder {
-  private roomCounter = 0;
-
   /**
    * Initializes a new graph and places a seed room at (0, 0, 0)
    */
@@ -98,13 +114,13 @@ export class ShipLayoutBuilder {
     const def = getRoomDefinitionForCard(seedCardCode);
     const template = getRoomTemplateForCard(seedCardCode);
 
-    this.roomCounter = 0;
-    const roomId = `room_${this.roomCounter++}`;
+    const roomId = 'room_0'; // Seed room is always room_0
 
     const seedRoom = instantiateRoomNode(
       roomId,
       def.name,
       seedCardCode,
+      undefined,
       def.name,
       template.width,
       template.height,
@@ -113,7 +129,8 @@ export class ShipLayoutBuilder {
       def.features,
       -Math.floor(template.width / 2), // Center the seed room
       -Math.floor(template.height / 2),
-      0
+      0,
+      true // Seed room starts cleared
     );
 
     graph.addRoom(seedRoom);
@@ -144,14 +161,16 @@ export class ShipLayoutBuilder {
     }
 
     // Instantiate new node at same coords, new deck level
-    const template = getRoomTemplateForCard(existingLift.cardCode || 'AH');
-    const def = getRoomDefinitionForCard(existingLift.cardCode || 'AH');
+    const liftRoomCardCode = existingLift.roomCardCode || existingLift.cardCode || 'AH';
+    const template = getRoomTemplateForCard(liftRoomCardCode);
+    const def = getRoomDefinitionForCard(liftRoomCardCode);
     
-    const newLiftRoomId = `room_${this.roomCounter++}`;
+    const newLiftRoomId = getNextRoomId(graph);
     const newLiftNode = instantiateRoomNode(
       newLiftRoomId,
       existingLift.name,
-      existingLift.cardCode || 'AH',
+      liftRoomCardCode,
+      existingLift.obstacleCardCode,
       existingLift.roomType,
       existingLift.width,
       existingLift.height,
@@ -160,7 +179,8 @@ export class ShipLayoutBuilder {
       def.features,
       existingLift.x,
       existingLift.y,
-      targetDeck
+      targetDeck,
+      true // Lift starts cleared
     );
 
     graph.addRoom(newLiftNode);
@@ -174,7 +194,8 @@ export class ShipLayoutBuilder {
     graph: RoomNodeGraph,
     parentRoomId: string,
     parentDoorDirection: DoorDirection,
-    cardCode: string
+    roomCardCode: string,
+    obstacleCardCode = roomCardCode
   ): RoomNode | null {
     const parentRoom = graph.getRoom(parentRoomId);
     if (!parentRoom) return null;
@@ -187,8 +208,8 @@ export class ShipLayoutBuilder {
       return graph.getRoom(connId) || null;
     }
 
-    const def = getRoomDefinitionForCard(cardCode);
-    const template = getRoomTemplateForCard(cardCode);
+    const def = getRoomDefinitionForCard(roomCardCode);
+    const template = getRoomTemplateForCard(roomCardCode);
     const z = parentRoom.z;
 
     const dirVec = getDirectionVector(parentDoorDirection);
@@ -248,11 +269,12 @@ export class ShipLayoutBuilder {
         const corridorTiles = planCorridor(roomsList, z, parentDoor.x, parentDoor.y, targetDoorX, targetDoorY);
         if (corridorTiles) {
           // Success! Place the room
-          const childRoomId = `room_${this.roomCounter++}`;
+          const childRoomId = getNextRoomId(graph);
           const childRoom = instantiateRoomNode(
             childRoomId,
             def.name,
-            cardCode,
+            roomCardCode,
+            obstacleCardCode,
             def.name,
             template.width,
             template.height,
@@ -261,7 +283,8 @@ export class ShipLayoutBuilder {
             def.features,
             candidateX,
             candidateY,
-            z
+            z,
+            false // New room starts with uncleared obstacle
           );
 
           // Add to graph
@@ -315,11 +338,12 @@ export class ShipLayoutBuilder {
 
       if (!overlaps) {
         // Direct attachment works
-        const childRoomId = `room_${this.roomCounter++}`;
+        const childRoomId = getNextRoomId(graph);
         const childRoom = instantiateRoomNode(
           childRoomId,
           def.name,
-          cardCode,
+          roomCardCode,
+          obstacleCardCode,
           def.name,
           template.width,
           template.height,
@@ -328,7 +352,8 @@ export class ShipLayoutBuilder {
           def.features,
           candidateX,
           candidateY,
-          z
+          z,
+          false // New room starts with uncleared obstacle
         );
 
         graph.addRoom(childRoom);

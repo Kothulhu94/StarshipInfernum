@@ -1,4 +1,5 @@
-export type VerbosityLevel = 'FULL' | 'KEY_MOMENTS' | 'MINIMAL';
+export type NarrativeInterruptionVolume = 'RARE' | 'FREQUENT' | 'CONSTANT';
+export type VerbosityLevel = NarrativeInterruptionVolume;
 
 export type NarrativeEventType = 
   | 'ROOM_ENTERED'

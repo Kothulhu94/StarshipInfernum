@@ -1,6 +1,19 @@
 import { Card } from '@cardEngine/cardDefinitions';
 import { Deck } from '@cardEngine/deckManager';
-import { evaluateHand } from '@cardEngine/handEvaluator';
+import {
+  addPlayerHit,
+  comparePlayerAndDealer,
+  createParticipantState,
+  dealDealerOpeningHand,
+  dealPlayerOpeningHand,
+  evaluateDealerOpeningHand,
+  evaluatePlayerHand,
+  exhaustTraitForHand,
+  findUsableTrait,
+  hasUsableTrait,
+  playDealerHand,
+  recoverOneExhaustedTrait
+} from '@cardEngine/blackjackTestSemantics';
 import { Character } from '@characterSystem/characterTypes';
 import { TestResult, TestUI } from './encounterTypes';
 import { damageTrait } from '@characterSystem/traitManager';
@@ -12,12 +25,13 @@ import { damageTrait } from '@characterSystem/traitManager';
 export async function runSimpleTest(
   player: Character,
   roDeck: Deck,
-  ui: TestUI
+  ui: TestUI,
+  initialTension: number = 0
 ): Promise<TestResult> {
   const traitsExhausted: string[] = [];
 
   while (true) {
-    const result = await runSimpleTestHand(player, roDeck, ui, traitsExhausted);
+    const result = await runSimpleTestHand(player, roDeck, ui, traitsExhausted, initialTension);
     if (result.outcome !== 'PUSH') {
       return result;
     }
@@ -30,22 +44,13 @@ async function runSimpleTestHand(
   player: Character,
   roDeck: Deck,
   ui: TestUI,
-  traitsExhausted: string[]
+  traitsExhausted: string[],
+  tension: number
 ): Promise<TestResult> {
-  // Setup hands from the Room & Obstacle deck
-  const playerHand: Card[] = [];
-  const dealerHand: Card[] = [];
-
-  // Player gets 2 cards face up
-  playerHand.push(roDeck.draw(), roDeck.draw());
-  playerHand.forEach(c => c.faceUp = true);
-
-  // Dealer gets 2 cards (first is face-down, second is face-up)
-  const d1 = roDeck.draw();
-  d1.faceUp = false;
-  const d2 = roDeck.draw();
-  d2.faceUp = true;
-  dealerHand.push(d1, d2);
+  const playerHand = dealPlayerOpeningHand(roDeck, tension);
+  const dealerOpening = dealDealerOpeningHand(roDeck);
+  const dealerHand = dealerOpening.hand;
+  const playerState = createParticipantState(playerHand);
 
   // Update UI
   const handsMap = new Map<string, Card[]>();
@@ -53,8 +58,8 @@ async function runSimpleTestHand(
   await ui.showRound(handsMap, dealerHand, 0);
 
   // Raw evaluations
-  let playerEval = evaluateHand(playerHand);
-  const rawDealerEval = evaluateHand([{ ...d1, faceUp: true }, d2]);
+  let playerEval = playerState.evaluation;
+  const rawDealerEval = evaluateDealerOpeningHand(dealerHand);
 
   // Check natural 21s
   if (rawDealerEval.isNatural21) {
@@ -66,64 +71,41 @@ async function runSimpleTestHand(
   }
 
   if (playerEval.isNatural21) {
-    // Recover exhausted trait
-    const exhausted = player.traits.find(t => t.exhausted && !t.busted);
-    if (exhausted) {
-      exhausted.exhausted = false;
-    }
+    recoverOneExhaustedTrait(player);
     return { outcome: 'WIN', finalPlayerTotal: 21, finalDealerTotal: rawDealerEval.total, traitsExhausted };
   }
 
   // Player choice loop
   let stand = false;
-  let appliedTraitModifier = 0;
 
   while (!stand && !playerEval.isBust) {
-    const action = await ui.promptPlayerAction(player, playerHand, appliedTraitModifier === 0);
+    const action = await ui.promptPlayerAction(player, playerHand, playerState.appliedTraitModifier === 0);
 
     if (action === 'HIT') {
-      const card = roDeck.draw();
-      card.faceUp = true;
-      playerHand.push(card);
-      playerEval = evaluateHand(playerHand);
-      playerEval.total += appliedTraitModifier;
-      if (playerEval.total > 21) {
-        playerEval.isBust = true;
-      }
+      playerEval = addPlayerHit(roDeck, playerState);
       await ui.showRound(handsMap, dealerHand, 0);
     } else if (action === 'STAND') {
       stand = true;
     } else if (typeof action === 'object' && action.type === 'TRAIT') {
-      const trait = player.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted);
+      const trait = findUsableTrait(player, action.traitName, playerHand);
       if (trait) {
-        trait.exhausted = true;
+        playerEval = exhaustTraitForHand(playerState, trait);
         traitsExhausted.push(trait.name);
-        appliedTraitModifier = trait.modifier;
-        playerEval.total += appliedTraitModifier;
-        if (playerEval.total > 21) {
-          playerEval.isBust = true;
-        } else {
-          playerEval.isBust = false;
-        }
         await ui.showRound(handsMap, dealerHand, 0);
       }
     }
   }
 
   // Mitigate bust if possible
-  if (playerEval.isBust && appliedTraitModifier === 0) {
-    const availableTraits = player.traits.filter(t => !t.exhausted && !t.busted);
-    if (availableTraits.length > 0) {
+  if (playerEval.isBust && playerState.appliedTraitModifier === 0) {
+    if (hasUsableTrait(player, playerHand)) {
       const action = await ui.promptPlayerAction(player, playerHand, true);
       if (typeof action === 'object' && action.type === 'TRAIT') {
-        const trait = player.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted);
+        const trait = findUsableTrait(player, action.traitName, playerHand);
         if (trait) {
-          trait.exhausted = true;
+          playerEval = exhaustTraitForHand(playerState, trait);
           traitsExhausted.push(trait.name);
-          appliedTraitModifier = -trait.modifier;
-          playerEval.total += appliedTraitModifier;
-          if (playerEval.total <= 21) {
-            playerEval.isBust = false;
+          if (!playerEval.isBust) {
             stand = true;
           }
           await ui.showRound(handsMap, dealerHand, 0);
@@ -143,29 +125,20 @@ async function runSimpleTestHand(
   }
 
   // Dealer play
-  d1.faceUp = true;
-  let dealerEval = evaluateHand(dealerHand);
+  const dealerEval = await playDealerHand(
+    roDeck,
+    dealerHand,
+    'solo-target',
+    () => ui.showRound(handsMap, dealerHand, 0),
+    playerEval.total
+  );
   await ui.showRound(handsMap, dealerHand, 0);
 
-  // Dealer hits to beat player's total (stops at 21 or when beating/tying player)
-  while (dealerEval.total < playerEval.total && dealerEval.total < 21) {
-    const card = roDeck.draw();
-    card.faceUp = true;
-    dealerHand.push(card);
-    dealerEval = evaluateHand(dealerHand);
-    await ui.showRound(handsMap, dealerHand, 0);
-  }
-
   // Evaluate final result
-  if (dealerEval.isBust) {
-    return { outcome: 'WIN', finalPlayerTotal: playerEval.total, finalDealerTotal: dealerEval.total, traitsExhausted };
-  }
-
-  if (dealerEval.total > playerEval.total) {
-    return { outcome: 'LOSE', finalPlayerTotal: playerEval.total, finalDealerTotal: dealerEval.total, traitsExhausted };
-  } else if (dealerEval.total === playerEval.total) {
-    return { outcome: 'PUSH', finalPlayerTotal: playerEval.total, finalDealerTotal: dealerEval.total, traitsExhausted };
-  }
-
-  return { outcome: 'LOSE', finalPlayerTotal: playerEval.total, finalDealerTotal: dealerEval.total, traitsExhausted };
+  return {
+    outcome: comparePlayerAndDealer(playerEval, dealerEval),
+    finalPlayerTotal: evaluatePlayerHand(playerHand, playerState.appliedTraitModifier).total,
+    finalDealerTotal: dealerEval.total,
+    traitsExhausted
+  };
 }

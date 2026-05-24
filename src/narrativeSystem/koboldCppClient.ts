@@ -1,6 +1,7 @@
 export class KoboldCppClient {
   private endpoint: string;
   private isConnected: boolean = false;
+  private generationTimeoutMs: number = 2500;
 
   constructor(endpoint: string = 'http://localhost:5001') {
     this.endpoint = endpoint;
@@ -25,14 +26,14 @@ export class KoboldCppClient {
     return this.isConnected;
   }
 
-  public async generate(prompt: string, maxTokens: number = 100): Promise<string> {
+  public async generate(prompt: string, maxTokens: number = 60): Promise<string> {
     if (!this.isConnected) {
       throw new Error('Not connected to KoboldCpp');
     }
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), this.generationTimeoutMs);
 
       const response = await fetch(`${this.endpoint}/api/v1/generate`, {
         method: 'POST',
@@ -56,7 +57,7 @@ export class KoboldCppClient {
       }
 
       const data = await response.json();
-      return data.results[0].text.trim();
+      return data.results?.[0]?.text?.trim() || '';
     } catch (e) {
       console.error('LLM Generation failed:', e);
       throw e;

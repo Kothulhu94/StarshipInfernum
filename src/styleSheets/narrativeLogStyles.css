@@ -34,6 +34,21 @@
   animation: entryFade 0.4s ease-out forwards;
 }
 
+.narrative-entry[hidden] {
+  display: none;
+}
+
+.panel__select {
+  min-width: 6.5rem;
+  border: var(--border-thin);
+  border-radius: var(--radius-sm);
+  background: var(--color-deep-space);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  padding: var(--space-3xs) var(--space-2xs);
+}
+
 /* Color Coding */
 .narrative-entry--cyan {
   color: var(--color-console-cyan);

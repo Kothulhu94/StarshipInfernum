@@ -1,6 +1,19 @@
 import { Card } from '@cardEngine/cardDefinitions';
 import { Deck } from '@cardEngine/deckManager';
-import { evaluateHand } from '@cardEngine/handEvaluator';
+import {
+  addPlayerHit,
+  comparePlayerAndDealer,
+  createParticipantState,
+  dealDealerOpeningHand,
+  dealPlayerOpeningHand,
+  evaluateDealerOpeningHand,
+  evaluatePlayerHand,
+  exhaustTraitForHand,
+  findUsableTrait,
+  hasUsableTrait,
+  playDealerHand,
+  recoverOneExhaustedTrait
+} from '@cardEngine/blackjackTestSemantics';
 import { Character } from '@characterSystem/characterTypes';
 import { TestResult, TestUI } from './encounterTypes';
 import { damageTrait } from '@characterSystem/traitManager';
@@ -22,24 +35,10 @@ export async function runSurvivalTest(
   const traitsExhausted: string[] = [];
 
   while (true) {
-    // 1. Setup hands
-    const playerHand: Card[] = [];
-    const dealerHand: Card[] = [];
-
-    // Player gets 2 + tension cards face up
-    const startCards = 2 + tension;
-    for (let i = 0; i < startCards; i++) {
-      const card = deck.draw();
-      card.faceUp = true;
-      playerHand.push(card);
-    }
-
-    // Dealer gets 2 cards (first is face-down, second is face-up)
-    const d1 = deck.draw();
-    d1.faceUp = false;
-    const d2 = deck.draw();
-    d2.faceUp = true;
-    dealerHand.push(d1, d2);
+    const playerHand = dealPlayerOpeningHand(deck, tension);
+    const dealerOpening = dealDealerOpeningHand(deck);
+    const dealerHand = dealerOpening.hand;
+    const playerState = createParticipantState(playerHand);
 
     // Update UI state
     const handsMap = new Map<string, Card[]>();
@@ -48,12 +47,9 @@ export async function runSurvivalTest(
 
     // 2. Check for Natural 21s
     // Make copies of hands to evaluate their raw values
-    const rawPlayerEval = evaluateHand(playerHand);
+    const rawPlayerEval = playerState.evaluation;
     // Dealer raw evaluation (treating first card as face up for check)
-    const rawDealerEval = evaluateHand([
-      { ...d1, faceUp: true },
-      d2
-    ]);
+    const rawDealerEval = evaluateDealerOpeningHand(dealerHand);
 
     if (rawDealerEval.isNatural21) {
       if (rawPlayerEval.isNatural21) {
@@ -88,10 +84,7 @@ export async function runSurvivalTest(
 
     if (rawPlayerEval.isNatural21) {
       // Player natural 21: win! Recover an exhausted trait.
-      const exhausted = player.traits.find(t => t.exhausted && !t.busted);
-      if (exhausted) {
-        exhausted.exhausted = false;
-      }
+      recoverOneExhaustedTrait(player);
       return {
         outcome: 'WIN',
         finalPlayerTotal: 21,
@@ -101,62 +94,39 @@ export async function runSurvivalTest(
     }
 
     // 3. Player Turn Loop
-    let playerEval = evaluateHand(playerHand);
+    let playerEval = playerState.evaluation;
     let stand = false;
-    let appliedTraitModifier = 0;
 
     while (!stand && !playerEval.isBust) {
       // Prompt player for action
-      const action = await ui.promptPlayerAction(player, playerHand, appliedTraitModifier === 0);
+      const action = await ui.promptPlayerAction(player, playerHand, playerState.appliedTraitModifier === 0);
 
       if (action === 'HIT') {
-        const card = deck.draw();
-        card.faceUp = true;
-        playerHand.push(card);
-        playerEval = evaluateHand(playerHand);
-        
-        // Add modifier if trait was already used
-        playerEval.total += appliedTraitModifier;
-        if (playerEval.total > 21) {
-          playerEval.isBust = true;
-        }
-
+        playerEval = addPlayerHit(deck, playerState);
         await ui.showRound(handsMap, dealerHand, tension);
       } else if (action === 'STAND') {
         stand = true;
       } else if (typeof action === 'object' && action.type === 'TRAIT') {
         // Exhaust trait to adjust score
-        const trait = player.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted);
+        const trait = findUsableTrait(player, action.traitName, playerHand);
         if (trait) {
-          trait.exhausted = true;
+          playerEval = exhaustTraitForHand(playerState, trait);
           traitsExhausted.push(trait.name);
-          appliedTraitModifier = trait.modifier;
-          
-          playerEval.total += appliedTraitModifier;
-          if (playerEval.total > 21) {
-            playerEval.isBust = true;
-          } else {
-            playerEval.isBust = false; // Could mitigate a bust
-          }
           await ui.showRound(handsMap, dealerHand, tension);
         }
       }
     }
 
     // If player busted, they can mitigate it using a trait if they haven't used one yet
-    if (playerEval.isBust && appliedTraitModifier === 0) {
-      const availableTraits = player.traits.filter(t => !t.exhausted && !t.busted);
-      if (availableTraits.length > 0) {
+    if (playerEval.isBust && playerState.appliedTraitModifier === 0) {
+      if (hasUsableTrait(player, playerHand)) {
         const action = await ui.promptPlayerAction(player, playerHand, true);
         if (typeof action === 'object' && action.type === 'TRAIT') {
-          const trait = player.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted);
+          const trait = findUsableTrait(player, action.traitName, playerHand);
           if (trait) {
-            trait.exhausted = true;
+            playerEval = exhaustTraitForHand(playerState, trait);
             traitsExhausted.push(trait.name);
-            appliedTraitModifier = -trait.modifier;
-            playerEval.total += appliedTraitModifier;
-            if (playerEval.total <= 21) {
-              playerEval.isBust = false;
+            if (!playerEval.isBust) {
               stand = true; // Recovered from bust, standing now
             }
             await ui.showRound(handsMap, dealerHand, tension);
@@ -206,11 +176,8 @@ export async function runSurvivalTest(
             };
 
             // Re-evaluate hand
-            playerEval = evaluateHand(playerHand);
-            playerEval.total += appliedTraitModifier;
-            if (playerEval.total > 21) {
-              playerEval.isBust = true;
-            }
+            playerEval = evaluatePlayerHand(playerHand, playerState.appliedTraitModifier);
+            playerState.evaluation = playerEval;
             
             await ui.showRound(handsMap, dealerHand, tension);
             
@@ -236,22 +203,18 @@ export async function runSurvivalTest(
     }
 
     // 5. Dealer Turn
-    d1.faceUp = true; // Reveal dealer face-down card
-    let dealerEval = evaluateHand(dealerHand);
+    const dealerEval = await playDealerHand(
+      deck,
+      dealerHand,
+      'solo-target',
+      () => ui.showRound(handsMap, dealerHand, tension),
+      playerEval.total
+    );
     await ui.showRound(handsMap, dealerHand, tension);
 
-    // Dealer hits to beat player's score
-    // In solo tests, Dealer hits until they have BEATEN or TIED player score, or bust
-    while (dealerEval.total < playerEval.total && dealerEval.total < 21) {
-      const card = deck.draw();
-      card.faceUp = true;
-      dealerHand.push(card);
-      dealerEval = evaluateHand(dealerHand);
-      await ui.showRound(handsMap, dealerHand, tension);
-    }
-
     // 6. Outcome Resolution
-    if (dealerEval.isBust) {
+    const outcome = comparePlayerAndDealer(playerEval, dealerEval);
+    if (outcome === 'WIN') {
       // Dealer busts, player wins!
       return {
         outcome: 'WIN',
@@ -261,7 +224,7 @@ export async function runSurvivalTest(
       };
     }
 
-    if (dealerEval.total > playerEval.total) {
+    if (outcome === 'LOSE') {
       // Narrate dealer win
       gameStateStore.logMessage(`The Dealer beats your score (${dealerEval.total} vs ${playerEval.total}). The struggle continues...`);
       gameEventBus.emit('narrative_triggered', {
@@ -281,7 +244,7 @@ export async function runSurvivalTest(
       // Dealer wins: increase tension, start next round of the test
       tension++;
       continue;
-    } else if (dealerEval.total === playerEval.total) {
+    } else if (outcome === 'PUSH') {
       // Narrate push
       gameStateStore.logMessage(`Push! (${dealerEval.total} vs ${playerEval.total}). The struggle continues...`);
       await ui.showTestResult({

@@ -5,8 +5,11 @@ import { Character } from '@characterSystem/characterTypes';
 import { TestUI } from './encounterTypes';
 import { AdversaryData } from './adversaryRegistry';
 import { damageTrait } from '@characterSystem/traitManager';
+import { destroyWeapon, hasGear } from '@characterSystem/gearInventory';
+import { canUseTraitModifier } from '@characterSystem/playerActionModel';
 import { gameStateStore } from '@gameFlow/gameStateStore';
 import { gameEventBus } from '@gameFlow/gameEventBus';
+import { AdversaryDisposition, getRequiredAdversarySuccesses } from './adversaryStateTypes';
 
 /**
  * Handles the combat loop against a mobile Adversary.
@@ -20,17 +23,24 @@ export async function runAdversaryCombat(
   adversary: AdversaryData,
   deadPCs: Character[],
   deck: Deck,
-  ui: TestUI
-): Promise<{ defeated: boolean; playerEscaped: boolean; traitsExhausted: string[]; busted?: boolean }> {
+  ui: TestUI,
+  initialTension: number = 0,
+  successesRemaining: number = getRequiredAdversarySuccesses(adversary),
+  canDefeatInRegularCombat: boolean = true
+): Promise<{
+  defeated: boolean;
+  playerEscaped: boolean;
+  traitsExhausted: string[];
+  successesRemaining: number;
+  disposition: AdversaryDisposition;
+  busted?: boolean;
+}> {
   // Set starting HP based on level
-  let hp: number = adversary.level;
-  if (adversary.id === 'warmonger' && adversary.level === 3) {
-    hp = 4; // Warmonger lvl 3 requires 4 successes
-  }
+  let hp: number = successesRemaining;
 
   let playerEscaped = false;
   const traitsExhausted: string[] = [];
-  let tension = 0;
+  let tension = initialTension;
 
   // Armored Aptitude: Ignore 1 round of Rising Tension in all tests versus Adversaries
   const hasArmored = player.aptitude === 'Armored';
@@ -126,12 +136,17 @@ export async function runAdversaryCombat(
     let stand = false;
     let appliedTraitModifier = 0;
     let weaponRedrawUsed = false;
+    let weaponUsed: 'ranged_weapon' | 'melee_weapon' | null = null;
 
     // Predatory Horror: No Aptitudes allowed
     const canUseAptitude = adversary.id !== 'predatory_horror';
 
     while (!stand && !playerEval.isBust) {
-      const action = await ui.promptPlayerAction(player, playerHand, appliedTraitModifier === 0);
+      const hasWeapon = hasGear(player, 'ranged_weapon') || hasGear(player, 'melee_weapon');
+      const canApplyTrait = canUseTraitModifier(player, appliedTraitModifier === 0);
+      const action = await ui.promptPlayerAction(player, playerHand, canApplyTrait, {
+        canUseWeaponRedraw: hasWeapon && !weaponRedrawUsed
+      });
 
       if (action === 'HIT') {
         const card = deck.draw();
@@ -146,7 +161,9 @@ export async function runAdversaryCombat(
       } else if (action === 'STAND') {
         stand = true;
       } else if (typeof action === 'object' && action.type === 'TRAIT') {
-        const trait = player.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted);
+        const trait = canApplyTrait
+          ? player.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted)
+          : undefined;
         if (trait) {
           trait.exhausted = true;
           traitsExhausted.push(trait.name);
@@ -159,13 +176,26 @@ export async function runAdversaryCombat(
           }
           await ui.showRound(handsMap, dealerHand, tension);
         }
+      } else if (typeof action === 'object' && action.type === 'GEAR' && action.action === 'REDRAW_LAST_CARD') {
+        playerHand.pop();
+        const newCard = deck.draw();
+        newCard.faceUp = true;
+        playerHand.push(newCard);
+        playerEval = evaluateHand(playerHand);
+        playerEval.total += appliedTraitModifier;
+        if (playerEval.total > 21) {
+          playerEval.isBust = true;
+        }
+        weaponRedrawUsed = true;
+        weaponUsed = action.gear;
+        await ui.showRound(handsMap, dealerHand, tension);
       }
 
-      // Check for Weapon Redraw (if player has a weapon, once per combat round they can redraw the last card)
-      const hasWeapon = player.gear === 'ranged_weapon' || player.gear === 'melee_weapon';
-      if (hasWeapon && !weaponRedrawUsed && playerHand.length > 0 && !stand) {
-        // Redraw option: let's assume the user automatically does it if it prevents a bust, or can trigger it
-        if (playerEval.isBust) {
+      if (playerEval.isBust && hasWeapon && !weaponRedrawUsed && playerHand.length > 0) {
+        const redrawAction = await ui.promptPlayerAction(player, playerHand, false, {
+          canUseWeaponRedraw: true
+        });
+        if (typeof redrawAction === 'object' && redrawAction.type === 'GEAR' && redrawAction.action === 'REDRAW_LAST_CARD') {
           playerHand.pop(); // Remove busted card
           const newCard = deck.draw();
           newCard.faceUp = true;
@@ -176,18 +206,21 @@ export async function runAdversaryCombat(
             playerEval.isBust = true;
           }
           weaponRedrawUsed = true;
+          weaponUsed = redrawAction.gear;
           await ui.showRound(handsMap, dealerHand, tension);
         }
       }
     }
 
     // Mitigate player bust with Trait if not yet used
-    if (playerEval.isBust && appliedTraitModifier === 0) {
+    if (playerEval.isBust && canUseTraitModifier(player, appliedTraitModifier === 0)) {
       const availableTraits = player.traits.filter(t => !t.exhausted && !t.busted);
       if (availableTraits.length > 0) {
         const action = await ui.promptPlayerAction(player, playerHand, true);
         if (typeof action === 'object' && action.type === 'TRAIT') {
-          const trait = player.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted);
+          const trait = canUseTraitModifier(player, true)
+            ? player.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted)
+            : undefined;
           if (trait) {
             trait.exhausted = true;
             traitsExhausted.push(trait.name);
@@ -205,9 +238,8 @@ export async function runAdversaryCombat(
 
     // Handle BUST (permanently damage a Trait)
     if (playerEval.isBust) {
-      // If weapon redraw was used but player still busted, destroy the weapon
-      if (player.gear === 'ranged_weapon' || player.gear === 'melee_weapon') {
-        player.gear = null;
+      if (weaponRedrawUsed && weaponUsed) {
+        destroyWeapon(player, weaponUsed);
       }
 
       const chosenTrait = await ui.promptBustedTraitSelection(player);
@@ -221,7 +253,14 @@ export async function runAdversaryCombat(
           }
         }
       }
-      return { defeated: false, playerEscaped: false, traitsExhausted, busted: true };
+      return {
+        defeated: false,
+        playerEscaped: false,
+        traitsExhausted,
+        successesRemaining: hp,
+        disposition: 'chasing',
+        busted: true
+      };
     }
 
     // Dead PC Ghost Swap Mechanic
@@ -256,7 +295,14 @@ export async function runAdversaryCombat(
               if (chosenTrait) {
                 damageTrait(player, chosenTrait.name);
               }
-              return { defeated: false, playerEscaped: false, traitsExhausted, busted: true };
+              return {
+                defeated: false,
+                playerEscaped: false,
+                traitsExhausted,
+                successesRemaining: hp,
+                disposition: 'chasing',
+                busted: true
+              };
             }
             break;
           }
@@ -289,7 +335,14 @@ export async function runAdversaryCombat(
         if (chosenTrait) {
           damageTrait(player, chosenTrait.name);
         }
-        return { defeated: false, playerEscaped: false, traitsExhausted, busted: true };
+        return {
+          defeated: false,
+          playerEscaped: false,
+          traitsExhausted,
+          successesRemaining: hp,
+          disposition: 'chasing',
+          busted: true
+        };
       }
     }
 
@@ -373,10 +426,25 @@ export async function runAdversaryCombat(
     if (adversary.id === 'energy_form' && adversary.level === 3 && hp < 3 && hp > 0) {
       // In a real game context, this splits and flees (meaning combat ends and spawns others)
       // We will set hp to 0 to end combat and note that the entity split
-      return { defeated: false, playerEscaped: false, traitsExhausted };
+      return {
+        defeated: false,
+        playerEscaped: false,
+        traitsExhausted,
+        successesRemaining: 1,
+        disposition: 'fled'
+      };
     }
   }
 
   const defeated = hp <= 0;
-  return { defeated, playerEscaped, traitsExhausted };
+  const disposition: AdversaryDisposition = defeated
+    ? (canDefeatInRegularCombat ? 'defeated' : 'temporarily_driven_off')
+    : (playerEscaped ? 'fled' : 'chasing');
+  return {
+    defeated: defeated && canDefeatInRegularCombat,
+    playerEscaped,
+    traitsExhausted,
+    successesRemaining: defeated && canDefeatInRegularCombat ? 0 : Math.max(1, hp),
+    disposition
+  };
 }

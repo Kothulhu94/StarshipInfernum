@@ -2,6 +2,7 @@ import { Character } from '@characterSystem/characterTypes';
 import { MajorCrisisState, MinorCrisisState } from '@crisisSystem/crisisTypes';
 import { ScenarioConfig } from '@scenarioData/scenarioTypes';
 import { Card } from '@cardEngine/cardDefinitions';
+import { AdversaryInstance } from '@encounterSystem/adversaryStateTypes';
 
 export type GamePhase =
   | 'SETUP'
@@ -30,6 +31,7 @@ export interface GameState {
   survivalDeckCards: Card[];
   roDeckCards: Card[];
   drawnJokers: Card[]; // Tracks Jokers drawn during the current reel to shuffle back in
+  adversaryInstances: AdversaryInstance[];
 }
 
 export interface SerializableGameState {
@@ -50,6 +52,7 @@ export interface SerializableGameState {
   survivalDeckCards: Card[];
   roDeckCards: Card[];
   drawnJokers: Card[];
+  adversaryInstances: AdversaryInstance[];
   mapGraphSerialized: {
     rooms: any[];
     corridors: any[];

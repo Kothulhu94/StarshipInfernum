@@ -24,6 +24,7 @@ import { ShipMapScene } from './mapRenderer/shipMapScene';
 import '@userInterface/tooltipManager';
 import { showObstacleDescriptionModal } from './userInterface/obstacleDescriptionModal';
 import { OBSTACLE_REGISTRY } from './encounterSystem/obstacleRegistry';
+import { getObstacleCardCode, hasBlockingObstacle } from './mapGenerator/roomObstacleState';
 
 /* ─── Constants ───────────────────────────────────────── */
 
@@ -210,7 +211,7 @@ function triggerPhaserStateUpdate(state: any): void {
     // Calculate which rooms have active obstacles
     const activeObstacleRoomIds = new Set<string>();
     for (const room of graph.rooms.values()) {
-      if (room.cardCode && !room.isDiscovered) {
+      if (hasBlockingObstacle(room)) {
         activeObstacleRoomIds.add(room.id);
       }
     }
@@ -456,7 +457,8 @@ function boot(): void {
       const state = gameStateStore.getState();
       const graph = gameStateStore.getMapGraph();
       const currentRoom = state.activeRoomId ? graph.getRoom(state.activeRoomId) : null;
-      const obstacle = currentRoom?.cardCode ? OBSTACLE_REGISTRY[currentRoom.cardCode] : null;
+      const obstacleCardCode = currentRoom ? getObstacleCardCode(currentRoom) : undefined;
+      const obstacle = obstacleCardCode ? OBSTACLE_REGISTRY[obstacleCardCode] : null;
 
       if (obstacle && obstacle.type !== 'SAFETY') {
         showObstacleDescriptionModal(obstacle).then(() => {
