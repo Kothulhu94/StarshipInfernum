@@ -1,0 +1,170 @@
+/* ═══════════════════════════════════════════════════════════
+   CARD TABLE OVERLAY & PLAYING CARDS — Starship Infernum
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --card-width: 68px;
+  --card-height: 96px;
+}
+
+/* Card Slot Container for each PC */
+.card-table__player-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--color-deep-space-glow);
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm);
+  min-width: 140px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.4);
+}
+
+.card-table__player-name {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+/* Playing Card Element */
+.playing-card {
+  width: var(--card-width);
+  height: var(--card-height);
+  position: relative;
+  perspective: 1000px;
+  display: inline-block;
+  user-select: none;
+  animation: cardDeal 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+}
+
+.playing-card__inner {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.playing-card--face-up .playing-card__inner {
+  transform: rotateY(180deg);
+}
+
+.playing-card__front,
+.playing-card__back {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  backface-visibility: hidden;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+
+/* Card Back (Spaceship Hull steel design) */
+.playing-card__back {
+  background: radial-gradient(circle, var(--color-bulkhead-steel) 20%, var(--color-deep-space) 100%);
+  border: 2px solid var(--color-bulkhead-steel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playing-card__back::after {
+  content: '⚙';
+  font-size: 28px;
+  color: var(--color-text-muted);
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+  animation: gearSpin 12s linear infinite;
+}
+
+/* Card Front */
+.playing-card__front {
+  background: var(--color-panel-surface);
+  border: 1.5px solid var(--color-bulkhead-steel);
+  color: var(--color-text-primary);
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-2xs);
+}
+
+/* Card Rank / Suit Styling */
+.playing-card__corner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: var(--line-height-tight);
+}
+
+.playing-card__rank {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.playing-card__suit {
+  font-size: var(--font-size-sm);
+}
+
+.playing-card__center-suit {
+  font-size: 28px;
+  align-self: center;
+  margin-top: -4px;
+}
+
+/* Color codes */
+.playing-card--spades,
+.playing-card--clubs {
+  color: var(--color-text-primary);
+}
+
+.playing-card--hearts,
+.playing-card--diamonds {
+  color: var(--color-damage-red);
+}
+
+/* Joker / Disaster card styling */
+.playing-card--joker {
+  animation: jokerGlow 1.5s ease-in-out infinite alternate;
+}
+
+.playing-card--joker .playing-card__front {
+  background: radial-gradient(circle, var(--color-hull-gunmetal) 20%, #170d2b 100%);
+  border-color: var(--color-ghost-violet);
+  color: var(--color-ghost-violet);
+}
+
+.playing-card--joker .playing-card__center-suit::after {
+  content: '💀';
+  font-size: 28px;
+}
+
+/* Animations */
+@keyframes cardDeal {
+  from {
+    transform: translateY(-80px) rotate(-15deg);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes gearSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes jokerGlow {
+  from {
+    box-shadow: 0 0 5px var(--color-ghost-violet-dim);
+  }
+  to {
+    box-shadow: 0 0 15px var(--color-ghost-violet), 0 0 25px var(--color-ghost-violet-dim);
+  }
+}

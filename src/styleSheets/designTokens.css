@@ -1,0 +1,340 @@
+/* ═══════════════════════════════════════════════════════════
+   DESIGN TOKENS — Starship Infernum
+   Central source of truth for colors, typography, spacing,
+   shadows, borders, and z-index layers.
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Color Palette ─────────────────────────────────── */
+
+  /* Backgrounds — deep space to hull metal */
+  --color-void-black:       hsl(220, 20%, 6%);
+  --color-deep-space:       hsl(225, 18%, 9%);
+  --color-hull-gunmetal:    hsl(215, 15%, 14%);
+  --color-bulkhead-steel:   hsl(210, 10%, 25%);
+  --color-panel-surface:    hsl(215, 12%, 18%);
+
+  /* Primary accent — console cyan / holographic blue */
+  --color-console-cyan:     hsl(185, 80%, 55%);
+  --color-console-cyan-dim: hsl(185, 60%, 35%);
+  --color-hologram-blue:    hsl(200, 100%, 70%);
+  --color-hologram-glow:    hsla(200, 100%, 70%, 0.25);
+
+  /* Status colors */
+  --color-alert-amber:      hsl(38, 95%, 55%);
+  --color-alert-amber-dim:  hsl(38, 70%, 35%);
+  --color-damage-red:       hsl(0, 75%, 50%);
+  --color-damage-red-dim:   hsl(0, 55%, 30%);
+  --color-damage-red-glow:  hsla(0, 75%, 50%, 0.3);
+  --color-success-green:    hsl(145, 60%, 45%);
+  --color-success-green-dim:hsl(145, 40%, 28%);
+  --color-ghost-violet:     hsl(270, 40%, 60%);
+  --color-ghost-violet-dim: hsl(270, 25%, 35%);
+
+  /* Text */
+  --color-text-primary:     hsl(210, 15%, 88%);
+  --color-text-secondary:   hsl(210, 10%, 60%);
+  --color-text-muted:       hsl(210, 8%, 42%);
+  --color-text-inverse:     hsl(220, 20%, 6%);
+
+  /* Card suits */
+  --color-suit-spades:      hsl(210, 15%, 85%);
+  --color-suit-hearts:      hsl(0, 70%, 55%);
+  --color-suit-diamonds:    hsl(30, 85%, 55%);
+  --color-suit-clubs:       hsl(145, 50%, 50%);
+
+  /* Glassmorphism */
+  --glass-bg:               hsla(215, 15%, 14%, 0.75);
+  --glass-border:           hsla(210, 10%, 40%, 0.3);
+  --glass-blur:             12px;
+
+  /* ─── Typography ────────────────────────────────────── */
+  --font-display:           'Orbitron', 'Segoe UI', monospace;
+  --font-body:              'Inter', 'Segoe UI', sans-serif;
+  --font-mono:              'JetBrains Mono', 'Consolas', monospace;
+
+  --font-size-xs:           0.7rem;
+  --font-size-sm:           0.8rem;
+  --font-size-base:         0.95rem;
+  --font-size-md:           1.1rem;
+  --font-size-lg:           1.4rem;
+  --font-size-xl:           2rem;
+  --font-size-2xl:          3rem;
+  --font-size-title:        4.5rem;
+
+  --font-weight-normal:     400;
+  --font-weight-medium:     500;
+  --font-weight-semibold:   600;
+  --font-weight-bold:       700;
+  --font-weight-black:      900;
+
+  --line-height-tight:      1.2;
+  --line-height-normal:     1.5;
+  --line-height-relaxed:    1.7;
+
+  --letter-spacing-tight:   -0.02em;
+  --letter-spacing-normal:  0;
+  --letter-spacing-wide:    0.05em;
+  --letter-spacing-display: 0.15em;
+
+  /* ─── Spacing ───────────────────────────────────────── */
+  --space-2xs:              0.25rem;   /* 4px */
+  --space-xs:               0.5rem;    /* 8px */
+  --space-sm:               0.75rem;   /* 12px */
+  --space-md:               1rem;      /* 16px */
+  --space-lg:               1.5rem;    /* 24px */
+  --space-xl:               2rem;      /* 32px */
+  --space-2xl:              3rem;      /* 48px */
+  --space-3xl:              4rem;      /* 64px */
+
+  /* ─── Borders & Radii ───────────────────────────────── */
+  --radius-sm:              4px;
+  --radius-md:              8px;
+  --radius-lg:              12px;
+  --radius-xl:              16px;
+  --radius-round:           9999px;
+
+  --border-thin:            1px solid var(--glass-border);
+  --border-accent:          1px solid var(--color-console-cyan-dim);
+  --border-danger:          1px solid var(--color-damage-red-dim);
+  --border-glow:            1px solid var(--color-hologram-blue);
+
+  /* ─── Shadows ───────────────────────────────────────── */
+  --shadow-inset:           inset 0 1px 3px hsla(0, 0%, 0%, 0.4);
+  --shadow-card:            0 4px 12px hsla(0, 0%, 0%, 0.5);
+  --shadow-panel:           0 2px 20px hsla(0, 0%, 0%, 0.4);
+  --shadow-glow-cyan:       0 0 15px hsla(185, 80%, 55%, 0.3);
+  --shadow-glow-red:        0 0 15px hsla(0, 75%, 50%, 0.3);
+  --shadow-glow-amber:      0 0 15px hsla(38, 95%, 55%, 0.3);
+  --shadow-glow-green:      0 0 15px hsla(145, 60%, 45%, 0.3);
+
+  /* ─── Transitions ───────────────────────────────────── */
+  --transition-fast:        120ms ease-out;
+  --transition-normal:      250ms ease-out;
+  --transition-slow:        500ms ease-out;
+  --transition-dramatic:    800ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ─── Z-Index Layers ────────────────────────────────── */
+  --z-background:           0;
+  --z-map:                  10;
+  --z-panels:               20;
+  --z-card-table:           30;
+  --z-overlay:              40;
+  --z-modal:                50;
+  --z-toast:                60;
+
+  /* ─── Layout ────────────────────────────────────────── */
+  --map-panel-width:        320px;
+  --status-panel-width:     300px;
+  --card-width:             80px;
+  --card-height:            112px;
+  --card-border-radius:     6px;
+}
+
+/* ─── Global Reset & Base ─────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-void-black);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* Scrollbar styling for narrative log */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-bulkhead-steel);
+  border-radius: var(--radius-round);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-console-cyan-dim);
+}
+
+/* ─── Utility: Screen Management ──────────────────────── */
+
+.screen {
+  position: fixed;
+  inset: 0;
+  display: none;
+  overflow: hidden;
+}
+
+.screen--active {
+  display: flex;
+}
+
+/* ─── Common Component Tokens ─────────────────────────── */
+
+.menu-button {
+  font-family: var(--font-display);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+  background: var(--glass-bg);
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-xl);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+  min-width: 220px;
+  text-align: center;
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.menu-button:hover:not(:disabled) {
+  background: var(--color-panel-surface);
+  border-color: var(--color-console-cyan-dim);
+  box-shadow: var(--shadow-glow-cyan);
+  transform: translateY(-2px);
+}
+
+.menu-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.menu-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.menu-button--primary {
+  background: linear-gradient(
+    135deg,
+    var(--color-console-cyan-dim),
+    var(--color-hull-gunmetal)
+  );
+  border-color: var(--color-console-cyan);
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+.menu-button--primary:hover:not(:disabled) {
+  background: linear-gradient(
+    135deg,
+    var(--color-console-cyan),
+    var(--color-panel-surface)
+  );
+}
+
+.action-button {
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+  background: var(--color-hull-gunmetal);
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-lg);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.action-button:hover:not(:disabled) {
+  border-color: var(--color-console-cyan);
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+.action-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.action-button--hit {
+  border-color: var(--color-success-green-dim);
+}
+
+.action-button--hit:hover:not(:disabled) {
+  border-color: var(--color-success-green);
+  box-shadow: var(--shadow-glow-green);
+}
+
+.action-button--stand {
+  border-color: var(--color-alert-amber-dim);
+}
+
+.action-button--stand:hover:not(:disabled) {
+  border-color: var(--color-alert-amber);
+  box-shadow: var(--shadow-glow-amber);
+}
+
+.action-button--trait {
+  border-color: var(--color-ghost-violet-dim);
+}
+
+.action-button--trait:hover:not(:disabled) {
+  border-color: var(--color-ghost-violet);
+}
+
+/* ─── Panel Base Styles ───────────────────────────────── */
+
+.panel__header {
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: var(--border-thin);
+}
+
+.panel__title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-display);
+  text-transform: uppercase;
+  color: var(--color-console-cyan);
+}
+
+.panel__subtitle {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-display);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.panel__body {
+  padding: var(--space-md);
+  flex: 1;
+  overflow-y: auto;
+}
+
+.panel__body--canvas {
+  padding: 0;
+  overflow: hidden;
+}

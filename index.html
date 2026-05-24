@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Starship Infernum — Survive the Void</title>
+  <meta name="description" content="A sci-fi survival card game set aboard a doomed starship. Explore, survive, and resolve crises through blackjack-based mechanics." />
+
+  <!-- Google Fonts: Orbitron (display), Inter (body), JetBrains Mono (stats) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/src/styleSheets/designTokens.css" />
+  <link rel="stylesheet" href="/src/styleSheets/panelLayoutStyles.css" />
+  <link rel="stylesheet" href="/src/styleSheets/animationKeyframes.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- SCREEN: Title / Main Menu                          -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="title-screen" class="screen screen--active">
+    <div class="title-screen__backdrop">
+      <canvas id="starfield-canvas" aria-hidden="true"></canvas>
+    </div>
+    <div class="title-screen__content">
+      <h1 class="title-screen__heading">
+        <span class="title-screen__heading-top">Starship</span>
+        <span class="title-screen__heading-bottom">Infernum</span>
+      </h1>
+      <p class="title-screen__tagline">Space is cold. The cards are colder.</p>
+      <nav class="title-screen__menu" aria-label="Main menu">
+        <button id="btn-new-game" class="menu-button menu-button--primary">New Game</button>
+        <button id="btn-continue" class="menu-button" disabled>Continue</button>
+        <button id="btn-settings" class="menu-button">Settings</button>
+      </nav>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- SCREEN: Scenario Selection                         -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="scenario-selection-screen" class="screen">
+    <div class="scenario-selection">
+      <h2 class="scenario-selection__title">Select Scenario</h2>
+      <div id="scenario-list" class="scenario-selection__grid">
+        <!-- Rendered dynamically -->
+      </div>
+      <button id="btn-scenario-back" class="menu-button">Back to Title</button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- SCREEN: Character Creation / Roster Setup          -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="character-creation-screen" class="screen">
+    <div class="character-creation">
+      <h2 class="character-creation__title">Assemble Crew</h2>
+      <p class="character-creation__subtitle">Assemble between 1 to 6 crew members to start the mission</p>
+      <div id="char-slots-container" class="character-creation__slots">
+        <!-- Slots injected dynamically -->
+      </div>
+      <div class="character-creation__actions">
+        <button id="btn-char-back" class="menu-button">Back to Scenarios</button>
+        <button id="btn-start-game" class="menu-button menu-button--primary" disabled>Start Mission</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- SCREEN: Game Board                                 -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="game-screen" class="screen">
+    <div class="game-layout">
+
+      <!-- LEFT: Narration Log -->
+      <aside id="narrative-panel" class="panel panel--narrative" aria-label="Game narrative">
+        <header class="panel__header">
+          <h2 class="panel__title">Narration</h2>
+        </header>
+        <div id="narrative-log" class="narrative-log" role="log" aria-live="polite">
+          <div class="narrative-log__entries"></div>
+        </div>
+      </aside>
+
+      <!-- CENTER: Ship Map (Phaser canvas) + Card Table -->
+      <main id="map-panel" class="panel panel--map" aria-label="Ship map">
+        <header class="panel__header">
+          <h2 class="panel__title">Ship Map</h2>
+        </header>
+        <div id="phaser-container" class="panel__body panel__body--canvas">
+          <!-- Phaser 3 injects its canvas here -->
+        </div>
+
+        <!-- Card Table Overlay (hidden until a test begins) -->
+        <div id="card-table-overlay" class="card-table" aria-label="Blackjack table" hidden>
+          <div class="card-table__dealer-area">
+            <h3 class="card-table__label">Dealer</h3>
+            <div id="dealer-hand" class="card-table__hand"></div>
+            <span id="dealer-total" class="card-table__total"></span>
+          </div>
+
+          <div class="card-table__divider">
+            <span id="test-type-badge" class="card-table__badge">Survival Test</span>
+            <span id="rising-tension-indicator" class="card-table__tension" hidden>
+              Rising Tension: <span id="tension-level">0</span>
+            </span>
+          </div>
+
+          <div class="card-table__player-area">
+            <h3 class="card-table__label">Crew</h3>
+            <div id="player-hands-container" class="card-table__players">
+              <!-- Player hand slots injected dynamically -->
+            </div>
+          </div>
+
+          <div id="card-table-controls" class="card-table__controls">
+            <button id="btn-hit" class="action-button action-button--hit" title="Draw another card (H)">Hit</button>
+            <button id="btn-stand" class="action-button action-button--stand" title="Keep your hand (S)">Stand</button>
+            <button id="btn-use-trait" class="action-button action-button--trait" title="Exhaust a trait to modify score (T)" disabled>Use Trait</button>
+            <button id="btn-use-aptitude" class="action-button action-button--aptitude" title="Use aptitude ability (A)" disabled>Aptitude</button>
+          </div>
+        </div>
+
+        <!-- Exploration / Actions controls -->
+        <div id="explore-controls" class="explore-controls" style="display: flex; gap: var(--space-xs); justify-content: center; padding: var(--space-sm); border-top: var(--border-thin); background: var(--color-hull-gunmetal);">
+          <button id="btn-explore-n" class="settings-button" style="margin: 0;">Explore N</button>
+          <button id="btn-explore-s" class="settings-button" style="margin: 0;">Explore S</button>
+          <button id="btn-explore-e" class="settings-button" style="margin: 0;">Explore E</button>
+          <button id="btn-explore-w" class="settings-button" style="margin: 0;">Explore W</button>
+          <button id="btn-attempt-crisis" class="settings-button" style="margin: 0; color: var(--color-alert-amber);">Crisis Step</button>
+          <button id="btn-safety-rest" class="settings-button" style="margin: 0; color: var(--color-success-green);">Rest</button>
+        </div>
+      </main>
+
+      <!-- RIGHT: Crisis Clock + Active Crises -->
+      <aside id="status-panel" class="panel panel--status" aria-label="Crisis status">
+        <!-- Crisis Clock -->
+        <div id="crisis-clock" class="crisis-clock">
+          <h2 class="panel__title">Crisis Clock</h2>
+          <div id="clock-tokens" class="crisis-clock__tokens">
+            <!-- Token elements injected dynamically -->
+          </div>
+          <span id="reel-counter" class="crisis-clock__reel">Reel 1</span>
+        </div>
+
+        <!-- Crisis Cards -->
+        <div id="crisis-cards" class="crisis-cards">
+          <h3 class="panel__subtitle">Active Crises</h3>
+          <div id="major-crisis-slot" class="crisis-card crisis-card--major">
+            <span class="crisis-card__label">Major</span>
+            <span id="major-crisis-name" class="crisis-card__name">—</span>
+            <span id="major-crisis-jokers" class="crisis-card__jokers"></span>
+          </div>
+          <div id="minor-crisis-slot" class="crisis-card crisis-card--minor">
+            <span class="crisis-card__label">Minor</span>
+            <span id="minor-crisis-name" class="crisis-card__name">—</span>
+            <span id="minor-crisis-jokers" class="crisis-card__jokers"></span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- BOTTOM: Horizontal Crew Roster -->
+      <footer id="crew-panel" class="panel panel--crew" aria-label="Crew roster">
+        <div id="character-sheets" class="character-sheets">
+          <div id="crew-roster" class="character-sheets__roster">
+            <!-- Character sheet cards injected dynamically -->
+          </div>
+        </div>
+      </footer>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- SCREEN: Game Over                                  -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <section id="gameover-screen" class="screen">
+    <div class="gameover__content">
+      <h1 id="gameover-heading" class="gameover__heading">Mission Complete</h1>
+      <p id="gameover-summary" class="gameover__summary"></p>
+      <div id="gameover-survivors" class="gameover__survivors"></div>
+      <nav class="gameover__menu">
+        <button id="btn-play-again" class="menu-button menu-button--primary">Play Again</button>
+        <button id="btn-return-title" class="menu-button">Return to Title</button>
+      </nav>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- MODAL: Settings (shared across all screens)        -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <dialog id="settings-modal" class="modal modal--settings">
+    <form method="dialog" class="modal__form">
+      <h2 class="modal__title">Settings</h2>
+
+      <fieldset class="settings-group">
+        <legend class="settings-group__legend">Narrative</legend>
+        <label class="settings-field">
+          <span class="settings-field__label">Verbosity</span>
+          <select id="setting-verbosity" class="settings-field__select">
+            <option value="full">Full Immersion</option>
+            <option value="key-moments" selected>Key Moments</option>
+            <option value="minimal">Minimal</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset class="settings-group">
+        <legend class="settings-group__legend">AI Dealer (KoboldCpp)</legend>
+        <label class="settings-field">
+          <span class="settings-field__label">Endpoint</span>
+          <input id="setting-llm-endpoint" type="url" class="settings-field__input" value="http://localhost:5001" placeholder="http://localhost:5001" />
+        </label>
+        <label class="settings-field">
+          <span class="settings-field__label">Status</span>
+          <span id="llm-status" class="settings-field__status settings-field__status--disconnected">Disconnected</span>
+        </label>
+        <button id="btn-test-llm" type="button" class="settings-button">Test Connection</button>
+      </fieldset>
+
+      <fieldset class="settings-group">
+        <legend class="settings-group__legend">Audio</legend>
+        <label class="settings-field">
+          <span class="settings-field__label">Master Volume</span>
+          <input id="setting-volume" type="range" min="0" max="100" value="60" class="settings-field__range" />
+        </label>
+        <label class="settings-field settings-field--checkbox">
+          <input id="setting-mute" type="checkbox" class="settings-field__checkbox" />
+          <span class="settings-field__label">Mute All</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="settings-group">
+        <legend class="settings-group__legend">Save / Load</legend>
+        <div class="settings-save-slots">
+          <button id="btn-save-slot-1" type="button" class="settings-button">Save Slot 1</button>
+          <button id="btn-save-slot-2" type="button" class="settings-button">Save Slot 2</button>
+          <button id="btn-save-slot-3" type="button" class="settings-button">Save Slot 3</button>
+          <button id="btn-load-slot-1" type="button" class="settings-button">Load Slot 1</button>
+          <button id="btn-load-slot-2" type="button" class="settings-button">Load Slot 2</button>
+          <button id="btn-load-slot-3" type="button" class="settings-button">Load Slot 3</button>
+        </div>
+      </fieldset>
+
+      <div class="modal__actions">
+        <button type="submit" class="menu-button menu-button--primary">Close</button>
+      </div>
+    </form>
+  </dialog>
+  
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- MODAL: Ghost Flashback / Memory Swap               -->
+  <!-- ═══════════════════════════════════════════════════ -->
+  <dialog id="ghost-flashback-modal" class="modal modal--ghost">
+    <div class="modal__content">
+      <h2 class="modal__title">Ghostly Flashback</h2>
+      <p id="ghost-prompt" class="modal__desc"></p>
+      <div class="ghost-card-selection">
+        <p class="modal__subdesc" style="color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Select your held card to give to the living PC:</p>
+        <div id="ghost-cards-container" class="ghost-card-selection__cards"></div>
+      </div>
+      <div class="ghost-narration-form" style="margin-top: var(--space-md);">
+        <label for="ghost-narration-input" class="settings-field__label">Narrate a memory of your connection to this crewmate:</label>
+        <textarea id="ghost-narration-input" class="settings-field__input" placeholder="Recall a time when..." rows="3" style="width: 100%; resize: none; margin-top: var(--space-xs); box-sizing: border-box;"></textarea>
+      </div>
+      <div class="modal__actions" style="margin-top: var(--space-md); gap: var(--space-sm);">
+        <button id="btn-ghost-submit" class="menu-button menu-button--primary">Trigger Swap</button>
+        <button id="btn-ghost-skip" class="menu-button">Skip Swap</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script type="module" src="/src/starshipInfernum.ts"></script>
+</body>
+</html>

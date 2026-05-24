@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "sourceMap": true,
+    "paths": {
+      "@cardEngine/*": ["./src/cardEngine/*"],
+      "@characterSystem/*": ["./src/characterSystem/*"],
+      "@encounterSystem/*": ["./src/encounterSystem/*"],
+      "@crisisSystem/*": ["./src/crisisSystem/*"],
+      "@scenarioData/*": ["./src/scenarioData/*"],
+      "@gameFlow/*": ["./src/gameFlow/*"],
+      "@mapGenerator/*": ["./src/mapGenerator/*"],
+      "@mapRenderer/*": ["./src/mapRenderer/*"],
+      "@narrativeSystem/*": ["./src/narrativeSystem/*"],
+      "@userInterface/*": ["./src/userInterface/*"],
+      "@audioSystem/*": ["./src/audioSystem/*"],
+      "@styleSheets/*": ["./src/styleSheets/*"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

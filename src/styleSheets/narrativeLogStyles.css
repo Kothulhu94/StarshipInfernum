@@ -1,0 +1,97 @@
+/* ═══════════════════════════════════════════════════════════
+   NARRATIVE LOG & TERMINAL OUTPUT — Starship Infernum
+   ═══════════════════════════════════════════════════════════ */
+
+/* Custom scrollbars for narrative log and status panels */
+.narrative-log::-webkit-scrollbar,
+.panel--status::-webkit-scrollbar {
+  width: 6px;
+}
+
+.narrative-log::-webkit-scrollbar-track,
+.panel--status::-webkit-scrollbar-track {
+  background: var(--color-deep-space);
+}
+
+.narrative-log::-webkit-scrollbar-thumb,
+.panel--status::-webkit-scrollbar-thumb {
+  background: var(--color-bulkhead-steel);
+  border-radius: var(--radius-sm);
+}
+
+.narrative-log::-webkit-scrollbar-thumb:hover,
+.panel--status::-webkit-scrollbar-thumb:hover {
+  background: var(--color-console-cyan-dim);
+}
+
+/* Individual entries */
+.narrative-entry {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  padding: var(--space-2xs) var(--space-xs);
+  border-left: 2px solid transparent;
+  animation: entryFade 0.4s ease-out forwards;
+}
+
+/* Color Coding */
+.narrative-entry--cyan {
+  color: var(--color-console-cyan);
+  border-color: var(--color-console-cyan-dim);
+}
+
+.narrative-entry--red {
+  color: var(--color-damage-red);
+  border-color: var(--color-damage-red-dim);
+  font-weight: var(--font-weight-medium);
+  background: hsla(0, 75%, 50%, 0.05);
+}
+
+.narrative-entry--amber {
+  color: var(--color-alert-amber);
+  border-color: var(--color-alert-amber-dim);
+}
+
+.narrative-entry--green {
+  color: var(--color-success-green);
+  border-color: var(--color-success-green-dim);
+  background: hsla(145, 60%, 45%, 0.05);
+}
+
+.narrative-entry--system {
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  border-color: var(--color-bulkhead-steel);
+}
+
+.narrative-entry--ghost {
+  color: var(--color-ghost-violet);
+  border-color: var(--color-ghost-violet-dim);
+  background: rgba(147, 112, 219, 0.05);
+  font-style: italic;
+}
+
+/* Typewriter animation indicator */
+.typewriter-cursor::after {
+  content: '▋';
+  display: inline-block;
+  color: var(--color-console-cyan);
+  animation: cursorBlink 0.8s steps(2, start) infinite;
+  margin-left: 2px;
+}
+
+@keyframes entryFade {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes cursorBlink {
+  to { visibility: hidden; }
+}

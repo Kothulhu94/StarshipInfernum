@@ -1,0 +1,145 @@
+/* ═══════════════════════════════════════════════════════════
+   CHARACTER SHEETS & STATUS SIDEBAR — Starship Infernum
+   ═══════════════════════════════════════════════════════════ */
+
+.character-card {
+  background: var(--color-hull-gunmetal);
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  position: relative;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-panel);
+  min-width: 260px;
+  max-width: 320px;
+  flex: 1;
+}
+
+.character-card--active {
+  border-color: var(--color-console-cyan);
+  box-shadow: 0 0 10px var(--color-console-cyan-dim);
+}
+
+.character-card--dead {
+  border-color: var(--color-ghost-violet-dim);
+  background: linear-gradient(135deg, var(--color-hull-gunmetal) 70%, #1e122b 100%);
+  opacity: 0.75;
+}
+
+.character-card__name {
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.character-card--active .character-card__name {
+  color: var(--color-console-cyan);
+  text-shadow: 0 0 6px var(--color-console-cyan-dim);
+}
+
+.character-card__concept {
+  font-family: var(--font-body);
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  margin-top: -2px;
+}
+
+/* Traits list */
+.character-card__traits {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-2xs) 0;
+}
+
+.trait-item {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  padding: 1px var(--space-2xs);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.trait-item__name {
+  flex: 1;
+}
+
+.trait-item__val {
+  font-family: var(--font-mono);
+  color: var(--color-alert-amber);
+}
+
+.trait-item--exhausted {
+  opacity: 0.5;
+  color: var(--color-text-muted);
+}
+
+.trait-item--exhausted .trait-item__val {
+  color: var(--color-text-muted);
+}
+
+.trait-item--busted {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-damage-red);
+  text-decoration-thickness: 1.5px;
+  color: var(--color-damage-red-dim);
+  opacity: 0.6;
+}
+
+.trait-item--busted .trait-item__val {
+  color: var(--color-damage-red-dim);
+}
+
+/* Gear & Aptitude Badges */
+.character-card__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--glass-border);
+  padding-top: var(--space-2xs);
+  margin-top: var(--space-2xs);
+  font-size: var(--font-size-2xs);
+}
+
+.badge {
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.badge--aptitude {
+  background: var(--color-deep-space-glow);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-bulkhead-steel);
+}
+
+.badge--gear {
+  background: var(--color-alert-amber-dim);
+  color: var(--color-alert-amber);
+}
+
+/* Ghost Swapping overlay */
+.character-card__ghost-overlay {
+  position: absolute;
+  top: var(--space-xs);
+  right: var(--space-sm);
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-ghost-violet);
+  background: rgba(147, 112, 219, 0.15);
+  border: 1px solid var(--color-ghost-violet-dim);
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 5px var(--color-ghost-violet-dim);
+}

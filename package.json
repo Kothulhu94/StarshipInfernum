@@ -1,0 +1,18 @@
+{
+  "name": "starship-infernum",
+  "version": "0.1.0",
+  "description": "Starship Infernum — A browser-based sci-fi survival card game powered by blackjack mechanics",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.87.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
