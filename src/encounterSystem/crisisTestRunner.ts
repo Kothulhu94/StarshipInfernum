@@ -29,7 +29,7 @@ export async function runCrisisTest(
       details: result
     };
   } else {
-    // LOSE or PUSH count as a failure
+    // Simple tests re-deal pushes internally, so only a resolved loss reaches this path.
     return {
       outcome: 'FAIL',
       details: result

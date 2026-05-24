@@ -98,7 +98,7 @@ export async function dispatchObstacle(
       const result = await runAdversaryCombat(player, adversary, deadPCs, survivalDeck, ui);
       
       const testResult: TestResult = {
-        outcome: result.defeated ? 'WIN' : 'LOSE',
+        outcome: result.defeated ? 'WIN' : (result.busted ? 'BUST' : 'LOSE'),
         finalPlayerTotal: 0,
         finalDealerTotal: 0,
         traitsExhausted: result.traitsExhausted

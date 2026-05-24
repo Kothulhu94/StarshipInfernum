@@ -4,6 +4,9 @@ import { evaluateHand } from '@cardEngine/handEvaluator';
 import { Character } from '@characterSystem/characterTypes';
 import { TestUI } from './encounterTypes';
 import { AdversaryData } from './adversaryRegistry';
+import { damageTrait } from '@characterSystem/traitManager';
+import { gameStateStore } from '@gameFlow/gameStateStore';
+import { gameEventBus } from '@gameFlow/gameEventBus';
 
 /**
  * Handles the combat loop against a mobile Adversary.
@@ -18,7 +21,7 @@ export async function runAdversaryCombat(
   deadPCs: Character[],
   deck: Deck,
   ui: TestUI
-): Promise<{ defeated: boolean; playerEscaped: boolean; traitsExhausted: string[] }> {
+): Promise<{ defeated: boolean; playerEscaped: boolean; traitsExhausted: string[]; busted?: boolean }> {
   // Set starting HP based on level
   let hp: number = adversary.level;
   if (adversary.id === 'warmonger' && adversary.level === 3) {
@@ -82,6 +85,19 @@ export async function runAdversaryCombat(
     const rawDealerEval = evaluateHand([{ ...d1, faceUp: true }, dealerHand[1]]);
 
     if (rawDealerEval.isNatural21 && !rawPlayerEval.isNatural21) {
+      gameStateStore.logMessage(`${adversary.name} gets a Natural 21 and gains the upper hand!`);
+      gameEventBus.emit('narrative_triggered', {
+        type: 'RISING_TENSION',
+        context: {
+          characterName: player.name,
+        }
+      });
+      await ui.showTestResult({
+        outcome: 'LOSE',
+        finalPlayerTotal: rawPlayerEval.total,
+        finalDealerTotal: 21,
+        traitsExhausted: []
+      }, true);
       tension++;
       continue; // Round loss, increment tension
     }
@@ -92,6 +108,15 @@ export async function runAdversaryCombat(
       const exhausted = player.traits.find(t => t.exhausted && !t.busted);
       if (exhausted) {
         exhausted.exhausted = false;
+      }
+      gameStateStore.logMessage(`${player.name} gets a Natural 21 and strikes ${adversary.name}!`);
+      if (hp > 0) {
+        await ui.showTestResult({
+          outcome: 'WIN',
+          finalPlayerTotal: 21,
+          finalDealerTotal: rawDealerEval.total,
+          traitsExhausted: []
+        }, true);
       }
       continue;
     }
@@ -185,21 +210,18 @@ export async function runAdversaryCombat(
         player.gear = null;
       }
 
-      const activeTrait = player.traits.find(t => !t.busted);
-      if (activeTrait) {
-        activeTrait.busted = true;
+      const chosenTrait = await ui.promptBustedTraitSelection(player);
+      if (chosenTrait) {
+        damageTrait(player, chosenTrait.name);
         if (adversary.id === 'giant_insect' && adversary.level === 3) {
           // Giant Insect Level 3 ability: causes TWO traits of damage on a bust
-          const secondTrait = player.traits.find(t => !t.busted);
+          const secondTrait = await ui.promptBustedTraitSelection(player);
           if (secondTrait) {
-            secondTrait.busted = true;
+            damageTrait(player, secondTrait.name);
           }
         }
-        if (!player.traits.some(t => !t.busted)) {
-          player.isDead = true;
-        }
       }
-      return { defeated: false, playerEscaped: false, traitsExhausted };
+      return { defeated: false, playerEscaped: false, traitsExhausted, busted: true };
     }
 
     // Dead PC Ghost Swap Mechanic
@@ -230,14 +252,11 @@ export async function runAdversaryCombat(
 
             if (playerEval.isBust) {
               // Busted after swap
-              const activeTrait = player.traits.find(t => !t.busted);
-              if (activeTrait) {
-                activeTrait.busted = true;
-                if (!player.traits.some(t => !t.busted)) {
-                  player.isDead = true;
-                }
+              const chosenTrait = await ui.promptBustedTraitSelection(player);
+              if (chosenTrait) {
+                damageTrait(player, chosenTrait.name);
               }
-              return { defeated: false, playerEscaped: false, traitsExhausted };
+              return { defeated: false, playerEscaped: false, traitsExhausted, busted: true };
             }
             break;
           }
@@ -266,14 +285,11 @@ export async function runAdversaryCombat(
 
       if (playerEval.isBust) {
         // Swap caused player to bust!
-        const activeTrait = player.traits.find(t => !t.busted);
-        if (activeTrait) {
-          activeTrait.busted = true;
-          if (!player.traits.some(t => !t.busted)) {
-            player.isDead = true;
-          }
+        const chosenTrait = await ui.promptBustedTraitSelection(player);
+        if (chosenTrait) {
+          damageTrait(player, chosenTrait.name);
         }
-        return { defeated: false, playerEscaped: false, traitsExhausted };
+        return { defeated: false, playerEscaped: false, traitsExhausted, busted: true };
       }
     }
 
@@ -315,13 +331,41 @@ export async function runAdversaryCombat(
     if (playerWins) {
       // Success: decrease Adversary HP
       hp--;
-      // Reset tension for next combat round (or keep it? The guide says "tension rises when a player fails a hand")
       tension = 0;
+      gameStateStore.logMessage(`${player.name} wins the exchange against ${adversary.name}! (${playerEval.total} vs ${dealerEval.total})`);
+      if (hp > 0) {
+        await ui.showTestResult({
+          outcome: 'WIN',
+          finalPlayerTotal: playerEval.total,
+          finalDealerTotal: dealerEval.total,
+          traitsExhausted: []
+        }, true);
+      }
     } else if (dealerWins) {
       // Failure: increase tension for the next hand
       tension++;
+      gameStateStore.logMessage(`${adversary.name} gains the upper hand! (${dealerEval.total} vs ${playerEval.total})`);
+      gameEventBus.emit('narrative_triggered', {
+        type: 'RISING_TENSION',
+        context: {
+          characterName: player.name,
+        }
+      });
+      await ui.showTestResult({
+        outcome: 'LOSE',
+        finalPlayerTotal: playerEval.total,
+        finalDealerTotal: dealerEval.total,
+        traitsExhausted: []
+      }, true);
     } else if (isPush) {
       // Push: re-deal hand without increasing tension
+      gameStateStore.logMessage(`Push! Both lock horns in a stalemate. (${playerEval.total} vs ${dealerEval.total})`);
+      await ui.showTestResult({
+        outcome: 'PUSH',
+        finalPlayerTotal: playerEval.total,
+        finalDealerTotal: dealerEval.total,
+        traitsExhausted: []
+      }, true);
       continue;
     }
 

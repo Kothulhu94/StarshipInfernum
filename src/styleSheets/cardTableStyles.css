@@ -29,6 +29,12 @@
   text-align: center;
 }
 
+.card-table__hand {
+  flex-wrap: wrap;
+  max-width: 100%;
+  row-gap: var(--space-2xs);
+}
+
 /* Playing Card Element */
 .playing-card {
   width: var(--card-width);
@@ -141,6 +147,69 @@
 .playing-card--joker .playing-card__center-suit::after {
   content: '💀';
   font-size: 28px;
+}
+
+@media (max-height: 760px) {
+  :root {
+    --card-width: 52px;
+    --card-height: 74px;
+  }
+
+  .card-table__player-slot {
+    gap: var(--space-2xs);
+    min-width: 108px;
+    padding: var(--space-xs);
+  }
+
+  .card-table__player-name {
+    max-width: 100px;
+    font-size: 0.62rem;
+  }
+
+  .card-table__hand {
+    gap: 3px;
+  }
+
+  .playing-card__back::after,
+  .playing-card__center-suit,
+  .playing-card--joker .playing-card__center-suit::after {
+    font-size: 21px;
+  }
+
+  .playing-card__rank {
+    font-size: var(--font-size-sm);
+  }
+
+  .playing-card__suit {
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --card-width: 50px;
+    --card-height: 70px;
+  }
+
+  .card-table__player-slot {
+    min-width: 104px;
+  }
+
+  .card-table__hand {
+    gap: 3px;
+  }
+}
+
+@media (max-height: 560px) {
+  :root {
+    --card-width: 44px;
+    --card-height: 62px;
+  }
+
+  .card-table__player-slot {
+    min-width: 92px;
+    padding: var(--space-2xs);
+  }
 }
 
 /* Animations */

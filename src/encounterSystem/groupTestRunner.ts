@@ -3,6 +3,7 @@ import { Deck } from '@cardEngine/deckManager';
 import { evaluateHand } from '@cardEngine/handEvaluator';
 import { Character } from '@characterSystem/characterTypes';
 import { TestResult, TestUI } from './encounterTypes';
+import { damageTrait } from '@characterSystem/traitManager';
 
 /**
  * Runs a Group Test for multiple Characters against a single Dealer hand.
@@ -146,13 +147,9 @@ export async function runGroupTest(
     if (pEval.isBust) {
       let damageTaken: string | undefined;
       if (isFatal) {
-        const activeTrait = p.traits.find(t => !t.busted);
-        if (activeTrait) {
-          activeTrait.busted = true;
-          damageTaken = activeTrait.name;
-          if (!p.traits.some(t => !t.busted)) {
-            p.isDead = true;
-          }
+        const chosenTrait = await ui.promptBustedTraitSelection(p);
+        if (chosenTrait) {
+          damageTaken = damageTrait(p, chosenTrait.name) || undefined;
         }
       }
 
@@ -202,13 +199,9 @@ export async function runGroupTest(
               // Busted on swap
               let damageTaken: string | undefined;
               if (isFatal) {
-                const activeTrait = p.traits.find(t => !t.busted);
-                if (activeTrait) {
-                  activeTrait.busted = true;
-                  damageTaken = activeTrait.name;
-                  if (!p.traits.some(t => !t.busted)) {
-                    p.isDead = true;
-                  }
+                const chosenTrait = await ui.promptBustedTraitSelection(p);
+                if (chosenTrait) {
+                  damageTaken = damageTrait(p, chosenTrait.name) || undefined;
                 }
               }
               resultsMap.set(p.id, {

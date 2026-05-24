@@ -3,6 +3,7 @@ import { Deck } from '@cardEngine/deckManager';
 import { evaluateHand } from '@cardEngine/handEvaluator';
 import { Character } from '@characterSystem/characterTypes';
 import { TestResult, TestUI } from './encounterTypes';
+import { damageTrait } from '@characterSystem/traitManager';
 
 /**
  * Runs a single-round Simple Test for a Character against the Dealer.
@@ -15,6 +16,22 @@ export async function runSimpleTest(
 ): Promise<TestResult> {
   const traitsExhausted: string[] = [];
 
+  while (true) {
+    const result = await runSimpleTestHand(player, roDeck, ui, traitsExhausted);
+    if (result.outcome !== 'PUSH') {
+      return result;
+    }
+    // Show intermediate push result before re-dealing
+    await ui.showTestResult(result, true);
+  }
+}
+
+async function runSimpleTestHand(
+  player: Character,
+  roDeck: Deck,
+  ui: TestUI,
+  traitsExhausted: string[]
+): Promise<TestResult> {
   // Setup hands from the Room & Obstacle deck
   const playerHand: Card[] = [];
   const dealerHand: Card[] = [];
@@ -117,14 +134,10 @@ export async function runSimpleTest(
 
   // Handle BUST
   if (playerEval.isBust) {
-    const activeTrait = player.traits.find(t => !t.busted);
+    const chosenTrait = await ui.promptBustedTraitSelection(player);
     let damageTaken: string | undefined;
-    if (activeTrait) {
-      activeTrait.busted = true;
-      damageTaken = activeTrait.name;
-      if (!player.traits.some(t => !t.busted)) {
-        player.isDead = true;
-      }
+    if (chosenTrait) {
+      damageTaken = damageTrait(player, chosenTrait.name) || undefined;
     }
     return { outcome: 'BUST', finalPlayerTotal: playerEval.total, finalDealerTotal: 0, traitsExhausted, damageTaken };
   }

@@ -7,7 +7,7 @@ import { executeShapeshifterSwap, executeSmugglerSwap } from '@characterSystem/a
 import { showGhostFlashbackModal } from './ghostFlashbackModal';
 import { gameStateStore } from '@gameFlow/gameStateStore';
 
-import { promptTraitSelection } from './hitStandControls';
+import { promptTraitSelection, promptBustedTraitSelection } from './hitStandControls';
 
 // Local cache of dealer hand for decision context
 let currentDealerHand: Card[] = [];
@@ -84,6 +84,7 @@ export class CardTableOverlay implements TestUI {
     if (!overlay) return;
 
     overlay.removeAttribute('hidden');
+    document.getElementById('card-table-result')?.setAttribute('hidden', '');
 
     // Render Dealer area
     const dealerHandEl = document.getElementById('dealer-hand');
@@ -248,20 +249,62 @@ export class CardTableOverlay implements TestUI {
   }
 
   /**
+   * Prompts the player to select a trait to permanently bust.
+   */
+  public async promptBustedTraitSelection(character: Character): Promise<Trait | null> {
+    return await promptBustedTraitSelection(character);
+  }
+
+  /**
    * Closes the overlay.
    */
-  public async showTestResult(result: TestResult): Promise<void> {
+  public async showTestResult(result: TestResult, keepOverlayOpen: boolean = false): Promise<void> {
     gameStateStore.logMessage(`Test resolved. Player outcome: ${result.outcome}`);
-    await new Promise((r) => setTimeout(r, 1500));
-    
+
     const overlay = document.getElementById('card-table-overlay');
-    if (overlay) {
-      overlay.setAttribute('hidden', '');
+    if (!overlay || overlay.hasAttribute('hidden')) {
+      return;
     }
 
-    // Reset round-specific swap states
-    hasUsedShapeshifterSwap = false;
-    hasUsedSmugglerSwap = false;
+    const controls = document.getElementById('card-table-controls');
+    const resultPanel = document.getElementById('card-table-result');
+    const resultText = document.getElementById('card-table-result-text');
+    const continueBtn = document.getElementById('btn-card-table-continue') as HTMLButtonElement | null;
+
+    if (controls) controls.style.display = 'none';
+    if (resultText) {
+      const playerTotal = result.finalPlayerTotal > 0 ? `Crew ${result.finalPlayerTotal}` : 'Crew resolved';
+      const dealerTotal = result.finalDealerTotal > 0 ? `Dealer ${result.finalDealerTotal}` : 'Dealer resolved';
+      resultText.textContent = `${result.outcome} - ${playerTotal} / ${dealerTotal}`;
+      resultText.style.color = result.outcome === 'WIN'
+        ? 'var(--color-success-green)'
+        : result.outcome === 'BUST' || result.outcome === 'LOSE'
+          ? 'var(--color-damage-red)'
+          : 'var(--color-alert-amber)';
+    }
+    if (resultPanel) resultPanel.removeAttribute('hidden');
+
+    await new Promise<void>((resolve) => {
+      if (!continueBtn) {
+        window.setTimeout(resolve, 1200);
+        return;
+      }
+
+      const freshContinueBtn = continueBtn.cloneNode(true) as HTMLButtonElement;
+      continueBtn.replaceWith(freshContinueBtn);
+      freshContinueBtn.addEventListener('click', () => resolve(), { once: true });
+      freshContinueBtn.focus();
+    });
+
+    resultPanel?.setAttribute('hidden', '');
+    
+    if (!keepOverlayOpen) {
+      overlay.setAttribute('hidden', '');
+      
+      // Reset round-specific swap states only when overlay is closed (round finished)
+      hasUsedShapeshifterSwap = false;
+      hasUsedSmugglerSwap = false;
+    }
   }
 }
 

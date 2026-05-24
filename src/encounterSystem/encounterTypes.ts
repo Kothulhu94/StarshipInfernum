@@ -1,5 +1,5 @@
 import { Card } from '@cardEngine/cardDefinitions';
-import { Character } from '@characterSystem/characterTypes';
+import { Character, Trait } from '@characterSystem/characterTypes';
 
 export type ObstacleType = 'PERSISTENT' | 'ADVERSARY' | 'PERSONAL' | 'GROUP' | 'SAFETY';
 
@@ -40,6 +40,7 @@ export interface TestUI {
   showRound(playerHands: Map<string, Card[]>, dealerHand: Card[], tension: number): Promise<void>;
   promptPlayerAction(character: Character, hand: Card[], canUseTrait: boolean): Promise<'HIT' | 'STAND' | { type: 'TRAIT'; traitName: string }>;
   promptDeadPCFlashback(deadChar: Character, livingChar: Character, availableCards: Card[]): Promise<{ cardToGive: Card; flashbackText: string } | null>;
-  showTestResult(result: TestResult): Promise<void>;
+  showTestResult(result: TestResult, keepOverlayOpen?: boolean): Promise<void>;
+  promptBustedTraitSelection(character: Character): Promise<Trait | null>;
 }
 

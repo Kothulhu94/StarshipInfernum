@@ -78,10 +78,12 @@
       <aside id="narrative-panel" class="panel panel--narrative" aria-label="Game narrative">
         <header class="panel__header">
           <h2 class="panel__title">Narration</h2>
+          <button id="btn-toggle-narrative" class="panel-toggle" type="button" aria-label="Collapse narration panel" title="Collapse narration">‹</button>
         </header>
         <div id="narrative-log" class="narrative-log" role="log" aria-live="polite">
           <div class="narrative-log__entries"></div>
         </div>
+        <div id="resize-narrative" class="panel-resize-handle panel-resize-handle--right" role="separator" aria-orientation="vertical" aria-label="Resize narration panel"></div>
       </aside>
 
       <!-- CENTER: Ship Map (Phaser canvas) + Card Table -->
@@ -121,6 +123,11 @@
             <button id="btn-use-trait" class="action-button action-button--trait" title="Exhaust a trait to modify score (T)" disabled>Use Trait</button>
             <button id="btn-use-aptitude" class="action-button action-button--aptitude" title="Use aptitude ability (A)" disabled>Aptitude</button>
           </div>
+
+          <div id="card-table-result" class="card-table__result" hidden>
+            <span id="card-table-result-text" class="card-table__result-text"></span>
+            <button id="btn-card-table-continue" class="action-button action-button--stand">Continue</button>
+          </div>
         </div>
 
         <!-- Exploration / Actions controls -->
@@ -136,6 +143,9 @@
 
       <!-- RIGHT: Crisis Clock + Active Crises -->
       <aside id="status-panel" class="panel panel--status" aria-label="Crisis status">
+        <button id="btn-toggle-status" class="panel-toggle panel-toggle--floating" type="button" aria-label="Collapse crisis panel" title="Collapse crisis">›</button>
+        <div id="resize-status" class="panel-resize-handle panel-resize-handle--left" role="separator" aria-orientation="vertical" aria-label="Resize crisis panel"></div>
+
         <!-- Crisis Clock -->
         <div id="crisis-clock" class="crisis-clock">
           <h2 class="panel__title">Crisis Clock</h2>
@@ -163,12 +173,21 @@
 
       <!-- BOTTOM: Horizontal Crew Roster -->
       <footer id="crew-panel" class="panel panel--crew" aria-label="Crew roster">
+        <div id="resize-crew" class="panel-resize-handle panel-resize-handle--top" role="separator" aria-orientation="horizontal" aria-label="Resize crew panel"></div>
+        <header class="panel__header panel__header--crew">
+          <h2 class="panel__title">Crew</h2>
+          <button id="btn-toggle-crew" class="panel-toggle" type="button" aria-label="Collapse crew panel" title="Collapse crew">⌄</button>
+        </header>
         <div id="character-sheets" class="character-sheets">
           <div id="crew-roster" class="character-sheets__roster">
             <!-- Character sheet cards injected dynamically -->
           </div>
         </div>
       </footer>
+
+      <button id="btn-restore-narrative" class="panel-restore panel-restore--left" type="button" aria-label="Show narration panel" title="Show narration">›</button>
+      <button id="btn-restore-status" class="panel-restore panel-restore--right" type="button" aria-label="Show crisis panel" title="Show crisis">‹</button>
+      <button id="btn-restore-crew" class="panel-restore panel-restore--bottom" type="button" aria-label="Show crew panel" title="Show crew">⌃</button>
 
     </div>
   </section>
@@ -268,6 +287,23 @@
       <div class="modal__actions" style="margin-top: var(--space-md); gap: var(--space-sm);">
         <button id="btn-ghost-submit" class="menu-button menu-button--primary">Trigger Swap</button>
         <button id="btn-ghost-skip" class="menu-button">Skip Swap</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="obstacle-description-modal" class="modal modal--obstacle">
+    <div class="modal__content" style="display: flex; flex-direction: column; gap: var(--space-md);">
+      <h2 id="obstacle-modal-title" class="modal__title" style="margin-bottom: 0;">Obstacle Discovered</h2>
+      <div class="obstacle-modal__badge-container" style="text-align: center;">
+        <span id="obstacle-modal-badge" class="card-table__badge">PERSISTENT OBSTACLE</span>
+      </div>
+      <p id="obstacle-modal-flavor" class="modal__desc" style="font-style: italic; color: var(--color-text-secondary); text-align: center; margin: 0;"></p>
+      <div class="obstacle-modal__rules" style="border-top: var(--border-thin); padding-top: var(--space-md);">
+        <h4 style="font-family: var(--font-display); font-size: var(--font-size-xs); text-transform: uppercase; color: var(--color-alert-amber); margin: 0 0 var(--space-2xs) 0; letter-spacing: var(--letter-spacing-wide);">Consequences</h4>
+        <p id="obstacle-modal-rules-text" class="modal__subdesc" style="margin: 0; color: var(--color-text-primary); line-height: var(--line-height-relaxed);"></p>
+      </div>
+      <div class="modal__actions" style="margin-top: var(--space-sm); display: flex; justify-content: center;">
+        <button id="btn-obstacle-encounter" class="menu-button menu-button--primary">Face Danger</button>
       </div>
     </div>
   </dialog>

@@ -54,6 +54,27 @@ export class TurnSequencer {
     });
   }
 
+  private getDisplayResult(
+    testResult: TestResult | Map<string, TestResult>,
+    preferredCharacterId?: string
+  ): TestResult {
+    if (!(testResult instanceof Map)) {
+      return testResult;
+    }
+
+    const preferred = preferredCharacterId ? testResult.get(preferredCharacterId) : undefined;
+    if (preferred) {
+      return preferred;
+    }
+
+    return Array.from(testResult.values())[0] || {
+      outcome: 'PUSH',
+      finalPlayerTotal: 0,
+      finalDealerTotal: 0,
+      traitsExhausted: [],
+    };
+  }
+
   /**
    * Intercepts deck drawing to catch empty decks (reshuffles) and Joker draws.
    */
@@ -276,6 +297,7 @@ export class TurnSequencer {
       // Simple test with +1 tension card count (simulated via 1 starting tension in SimpleTest)
       const result = await runSimpleTest(activeChar, roDeck, ui);
       this.saveDecksToState(survivalDeck, roDeck);
+      await ui.showTestResult(result);
 
       if (result.outcome !== 'WIN') {
         gameStateStore.logMessage(`${activeChar.name} failed the safety rest test. No traits recovered.`);
@@ -356,6 +378,7 @@ export class TurnSequencer {
     }
 
     this.saveDecksToState(survivalDeck, roDeck);
+    await ui.showTestResult(this.getDisplayResult(testResult, activeChar.id));
 
     // Check if test resulted in win or bust
     let isBust = false;
@@ -388,6 +411,13 @@ export class TurnSequencer {
       const dRes = await runDisasterTest(disasterPlayers, disasterDead, roDeck, ui);
       gameStateStore.logMessage(dRes.resolved ? 'Disaster averted!' : 'Disaster ended in failure.');
       this.saveDecksToState(survivalDeck, roDeck);
+      await ui.showTestResult({
+        outcome: dRes.resolved ? 'WIN' : 'LOSE',
+        finalPlayerTotal: 0,
+        finalDealerTotal: 0,
+        traitsExhausted: [],
+        damageTaken: dRes.damageTaken,
+      });
     }
 
     // Check if everyone is dead
@@ -435,6 +465,7 @@ export class TurnSequencer {
     const { survivalDeck, roDeck } = this.getDecksFromState();
     const result = await runCrisisTest(activeChar, roDeck, ui);
     this.saveDecksToState(survivalDeck, roDeck);
+    await ui.showTestResult(result.details);
 
     this.crisisTestCountPerRoom.set(currentRoom.id, count + 1);
 

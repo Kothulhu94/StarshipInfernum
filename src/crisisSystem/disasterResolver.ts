@@ -5,6 +5,7 @@ import { Character } from '@characterSystem/characterTypes';
 import { TestUI } from '@encounterSystem/encounterTypes';
 import { damageTrait } from '@characterSystem/traitManager';
 import { canSurvivorSlink } from '@characterSystem/aptitudeExecutor';
+import { gameStateStore } from '@gameFlow/gameStateStore';
 
 export interface DisasterResult {
   resolved: boolean;
@@ -195,7 +196,11 @@ export async function runDisasterTest(
 
       // BUST ends the Disaster in failure
       if (pEval.isBust) {
-        const damagedTrait = damageTrait(p); // Inflicts damage
+        const chosenTrait = await ui.promptBustedTraitSelection(p);
+        let damagedTrait: string | null = null;
+        if (chosenTrait) {
+          damagedTrait = damageTrait(p, chosenTrait.name);
+        }
         return {
           resolved: false,
           damagedPlayerId: p.id,
@@ -235,7 +240,11 @@ export async function runDisasterTest(
               await ui.showRound(playerHands, dealerHand, 0);
 
               if (pEval.isBust) {
-                const damagedTrait = damageTrait(p);
+                const chosenTrait = await ui.promptBustedTraitSelection(p);
+                let damagedTrait: string | null = null;
+                if (chosenTrait) {
+                  damagedTrait = damageTrait(p, chosenTrait.name);
+                }
                 return {
                   resolved: false,
                   damagedPlayerId: p.id,
@@ -285,6 +294,15 @@ export async function runDisasterTest(
     if (allPlayersBeatDealer) {
       return { resolved: true };
     }
+
+    // Since the round was not won by all players, the disaster continues. Show intermediate result.
+    gameStateStore.logMessage(`Disaster round ${disasterRound} ends. Tension is rising!`);
+    await ui.showTestResult({
+      outcome: 'LOSE',
+      finalPlayerTotal: 0,
+      finalDealerTotal: dealerEval.total,
+      traitsExhausted: []
+    }, true);
 
     // Survivor Slink check for round winners after the first round
     for (const winnerId of roundWinners) {

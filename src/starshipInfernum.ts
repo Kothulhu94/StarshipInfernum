@@ -22,12 +22,15 @@ import { gameEventBus } from '@gameFlow/gameEventBus';
 import { gameStateStore } from '@gameFlow/gameStateStore';
 import { ShipMapScene } from './mapRenderer/shipMapScene';
 import '@userInterface/tooltipManager';
+import { showObstacleDescriptionModal } from './userInterface/obstacleDescriptionModal';
+import { OBSTACLE_REGISTRY } from './encounterSystem/obstacleRegistry';
 
 /* ─── Constants ───────────────────────────────────────── */
 
 const PHASER_CONTAINER_ID = 'phaser-container';
 
 let phaserGame: Phaser.Game | null = null;
+let updatePanelLayout: (() => void) | null = null;
 
 const SCREEN_IDS = {
   title: 'title-screen',
@@ -54,6 +57,9 @@ export function showScreen(screenId: string): void {
 
   // Initialize Phaser game when game screen becomes active for the first time
   if (screenId === SCREEN_IDS.game) {
+    if (updatePanelLayout) {
+      updatePanelLayout();
+    }
     if (!phaserGame) {
       phaserGame = createPhaserGame();
       
@@ -64,7 +70,7 @@ export function showScreen(screenId: string): void {
           scene.onRoomClicked = (roomId) => {
             turnSequencer.moveActiveCharacter(roomId);
           };
-          scene.onDoorClicked = (roomId, direction) => {
+          scene.onDoorClicked = (_roomId, direction) => {
             turnSequencer.exploreDoor(direction);
           };
         }
@@ -221,6 +227,12 @@ function triggerPhaserStateUpdate(state: any): void {
   }
 }
 
+function refreshMapLayout(): void {
+  window.setTimeout(() => {
+    phaserGame?.scale.refresh();
+  }, 50);
+}
+
 /* ─── Action / Exploration Controls ───────────────────── */
 
 function initExplorationControls(): void {
@@ -238,6 +250,171 @@ function initExplorationControls(): void {
 
   btnCrisis?.addEventListener('click', () => turnSequencer.attemptCrisisStep(cardTableOverlay));
   btnRest?.addEventListener('click', () => turnSequencer.restInSafetyRoom(cardTableOverlay));
+}
+
+/* ─── Adjustable Game Panels ──────────────────────────── */
+
+type AdjustablePanel = 'narrative' | 'status' | 'crew';
+
+interface PanelLayoutSettings {
+  narrativeWidth: number;
+  statusWidth: number;
+  crewHeight: number;
+  narrativeCollapsed: boolean;
+  statusCollapsed: boolean;
+  crewCollapsed: boolean;
+}
+
+const PANEL_LAYOUT_STORAGE_KEY = 'starshipInfernum.panelLayout';
+const PANEL_LAYOUT_DEFAULTS: PanelLayoutSettings = {
+  narrativeWidth: 320,
+  statusWidth: 300,
+  crewHeight: 170,
+  narrativeCollapsed: false,
+  statusCollapsed: false,
+  crewCollapsed: false,
+};
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function loadPanelLayoutSettings(): PanelLayoutSettings {
+  try {
+    const stored = window.localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY);
+    if (!stored) return { ...PANEL_LAYOUT_DEFAULTS };
+    return { ...PANEL_LAYOUT_DEFAULTS, ...JSON.parse(stored) };
+  } catch {
+    return { ...PANEL_LAYOUT_DEFAULTS };
+  }
+}
+
+function savePanelLayoutSettings(settings: PanelLayoutSettings): void {
+  window.localStorage.setItem(PANEL_LAYOUT_STORAGE_KEY, JSON.stringify(settings));
+}
+
+function initAdjustableGamePanels(): void {
+  const layout = document.querySelector<HTMLElement>('.game-layout');
+  if (!layout) return;
+
+  const settings = loadPanelLayoutSettings();
+
+  const applyLayout = () => {
+    const rect = layout.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const minMapWidth = Math.min(520, Math.max(260, rect.width * 0.48));
+    const maxSidePanelTotal = Math.max(0, rect.width - minMapWidth);
+    let effectiveNarrativeWidth = settings.narrativeCollapsed ? 0 : settings.narrativeWidth;
+    let effectiveStatusWidth = settings.statusCollapsed ? 0 : settings.statusWidth;
+    const effectiveSidePanelTotal = effectiveNarrativeWidth + effectiveStatusWidth;
+
+    if (effectiveSidePanelTotal > maxSidePanelTotal && effectiveSidePanelTotal > 0) {
+      const scale = maxSidePanelTotal / effectiveSidePanelTotal;
+      effectiveNarrativeWidth = Math.floor(effectiveNarrativeWidth * scale);
+      effectiveStatusWidth = Math.floor(effectiveStatusWidth * scale);
+    }
+
+    const minMapHeight = Math.min(360, Math.max(260, rect.height * 0.55));
+    const maxCrewHeight = Math.max(0, rect.height - minMapHeight);
+    const effectiveCrewHeight = settings.crewCollapsed ? 0 : Math.min(settings.crewHeight, maxCrewHeight);
+
+    layout.style.setProperty(
+      '--narrative-panel-width-current',
+      `${effectiveNarrativeWidth}px`
+    );
+    layout.style.setProperty(
+      '--status-panel-width-current',
+      `${effectiveStatusWidth}px`
+    );
+    layout.style.setProperty(
+      '--crew-panel-height-current',
+      `${effectiveCrewHeight}px`
+    );
+    layout.classList.toggle('is-narrative-collapsed', settings.narrativeCollapsed);
+    layout.classList.toggle('is-status-collapsed', settings.statusCollapsed);
+    layout.classList.toggle('is-crew-collapsed', settings.crewCollapsed);
+    refreshMapLayout();
+  };
+
+  const persistAndApply = () => {
+    savePanelLayoutSettings(settings);
+    applyLayout();
+  };
+
+  const setCollapsed = (panel: AdjustablePanel, collapsed: boolean) => {
+    if (panel === 'narrative') settings.narrativeCollapsed = collapsed;
+    if (panel === 'status') settings.statusCollapsed = collapsed;
+    if (panel === 'crew') settings.crewCollapsed = collapsed;
+    persistAndApply();
+  };
+
+  document.getElementById('btn-toggle-narrative')?.addEventListener('click', () => setCollapsed('narrative', true));
+  document.getElementById('btn-toggle-status')?.addEventListener('click', () => setCollapsed('status', true));
+  document.getElementById('btn-toggle-crew')?.addEventListener('click', () => setCollapsed('crew', true));
+  document.getElementById('btn-restore-narrative')?.addEventListener('click', () => setCollapsed('narrative', false));
+  document.getElementById('btn-restore-status')?.addEventListener('click', () => setCollapsed('status', false));
+  document.getElementById('btn-restore-crew')?.addEventListener('click', () => setCollapsed('crew', false));
+
+  const startResize = (event: PointerEvent, panel: AdjustablePanel) => {
+    event.preventDefault();
+    const handle = event.currentTarget as HTMLElement;
+    handle.setPointerCapture(event.pointerId);
+    layout.classList.toggle('is-resizing-vertical', panel === 'crew');
+    layout.classList.toggle('is-resizing', panel !== 'crew');
+
+    const move = (moveEvent: PointerEvent) => {
+      const rect = layout.getBoundingClientRect();
+      const visibleStatus = settings.statusCollapsed ? 0 : settings.statusWidth;
+      const visibleNarrative = settings.narrativeCollapsed ? 0 : settings.narrativeWidth;
+      const minMapWidth = Math.min(420, rect.width * 0.48);
+      const minMapHeight = Math.min(320, rect.height * 0.5);
+
+      if (panel === 'narrative') {
+        const maxWidth = Math.max(180, rect.width - visibleStatus - minMapWidth);
+        settings.narrativeWidth = clamp(moveEvent.clientX - rect.left, 180, maxWidth);
+        settings.narrativeCollapsed = false;
+      }
+
+      if (panel === 'status') {
+        const maxWidth = Math.max(180, rect.width - visibleNarrative - minMapWidth);
+        settings.statusWidth = clamp(rect.right - moveEvent.clientX, 180, maxWidth);
+        settings.statusCollapsed = false;
+      }
+
+      if (panel === 'crew') {
+        const maxHeight = Math.max(88, rect.height - minMapHeight);
+        settings.crewHeight = clamp(rect.bottom - moveEvent.clientY, 88, maxHeight);
+        settings.crewCollapsed = false;
+      }
+
+      applyLayout();
+    };
+
+    const stop = (stopEvent: PointerEvent) => {
+      handle.releasePointerCapture(stopEvent.pointerId);
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', stop);
+      handle.removeEventListener('pointercancel', stop);
+      layout.classList.remove('is-resizing', 'is-resizing-vertical');
+      savePanelLayoutSettings(settings);
+      refreshMapLayout();
+    };
+
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', stop);
+    handle.addEventListener('pointercancel', stop);
+  };
+
+  document.getElementById('resize-narrative')?.addEventListener('pointerdown', (event) => startResize(event, 'narrative'));
+  document.getElementById('resize-status')?.addEventListener('pointerdown', (event) => startResize(event, 'status'));
+  document.getElementById('resize-crew')?.addEventListener('pointerdown', (event) => startResize(event, 'crew'));
+
+  window.addEventListener('resize', () => {
+    applyLayout();
+    refreshMapLayout();
+  });
+  updatePanelLayout = applyLayout;
+  applyLayout();
 }
 
 /* ─── Boot Sequence ───────────────────────────────────── */
@@ -258,6 +435,7 @@ function boot(): void {
   initNarrativeLogPanel();
   initSettingsModal();
   initGameOverScreen();
+  initAdjustableGamePanels();
 
   // Wires state updates to ShipMapScene
   gameEventBus.on('state_updated', (state) => {
@@ -275,21 +453,24 @@ function boot(): void {
     }
 
     if (phase === 'OBSTACLE') {
-      // Auto-trigger obstacle blackjack test resolution
-      setTimeout(() => {
-        turnSequencer.resolveObstacle(cardTableOverlay);
-      }, 500);
+      const state = gameStateStore.getState();
+      const graph = gameStateStore.getMapGraph();
+      const currentRoom = state.activeRoomId ? graph.getRoom(state.activeRoomId) : null;
+      const obstacle = currentRoom?.cardCode ? OBSTACLE_REGISTRY[currentRoom.cardCode] : null;
+
+      if (obstacle && obstacle.type !== 'SAFETY') {
+        showObstacleDescriptionModal(obstacle).then(() => {
+          turnSequencer.resolveObstacle(cardTableOverlay);
+        });
+      } else {
+        setTimeout(() => {
+          turnSequencer.resolveObstacle(cardTableOverlay);
+        }, 500);
+      }
     }
   });
 
-  console.log(
-    '%c⚙ Starship Infernum booted',
-    'color: #4db8b8; font-weight: bold; font-size: 14px;'
-  );
-  console.log(
-    '%c  Phase 11 UI Panels Integration Complete.',
-    'color: #5a6377;'
-  );
+  console.log('%c⚙ Starship Infernum booted', 'color: #4db8b8; font-weight: bold;');
 }
 
 /* ─── Initialize ──────────────────────────────────────── */

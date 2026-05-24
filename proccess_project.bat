@@ -3,7 +3,7 @@ setlocal
 set "BASE_DIR=%~dp0"
 cd /d "%BASE_DIR%"
 
-set "PYTHON_EXE=%~d0\Users\rhoskins.evvcr\Desktop\Digi_Forge\StarshipInfernum\PortablePython\python.exe"
+set "PYTHON_EXE=C:\Users\rchos\Documents\Digi_Forge\PortablePython\python.exe"
 
 echo Running project bundler...
 

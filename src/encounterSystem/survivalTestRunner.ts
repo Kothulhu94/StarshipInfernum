@@ -3,6 +3,9 @@ import { Deck } from '@cardEngine/deckManager';
 import { evaluateHand } from '@cardEngine/handEvaluator';
 import { Character } from '@characterSystem/characterTypes';
 import { TestResult, TestUI } from './encounterTypes';
+import { damageTrait } from '@characterSystem/traitManager';
+import { gameStateStore } from '@gameFlow/gameStateStore';
+import { gameEventBus } from '@gameFlow/gameEventBus';
 
 /**
  * Runs a standard Survival Test for a single Character against the Dealer.
@@ -55,10 +58,29 @@ export async function runSurvivalTest(
     if (rawDealerEval.isNatural21) {
       if (rawPlayerEval.isNatural21) {
         // Both natural 21: push
-        tension = tension; // stays the same
+        gameStateStore.logMessage(`Push! Both dealer and player have Natural 21. The struggle continues...`);
+        await ui.showTestResult({
+          outcome: 'PUSH',
+          finalPlayerTotal: 21,
+          finalDealerTotal: 21,
+          traitsExhausted: []
+        }, true);
         continue;
       } else {
         // Dealer natural 21, player not: round over, tension increases
+        gameStateStore.logMessage(`The Dealer got a Natural 21. The struggle continues...`);
+        gameEventBus.emit('narrative_triggered', {
+          type: 'RISING_TENSION',
+          context: {
+            characterName: player.name,
+          }
+        });
+        await ui.showTestResult({
+          outcome: 'LOSE',
+          finalPlayerTotal: rawPlayerEval.total,
+          finalDealerTotal: 21,
+          traitsExhausted: []
+        }, true);
         tension++;
         continue;
       }
@@ -145,16 +167,11 @@ export async function runSurvivalTest(
 
     // Handle BUST outcome
     if (playerEval.isBust) {
-      // Permanently damage a Trait
-      const activeTrait = player.traits.find(t => !t.busted);
+      // Permanently damage a Trait by prompting
+      const chosenTrait = await ui.promptBustedTraitSelection(player);
       let damageTaken: string | undefined;
-      if (activeTrait) {
-        activeTrait.busted = true;
-        damageTaken = activeTrait.name;
-        // Check if dead
-        if (!player.traits.some(t => !t.busted)) {
-          player.isDead = true;
-        }
+      if (chosenTrait) {
+        damageTaken = damageTrait(player, chosenTrait.name) || undefined;
       }
 
       return {
@@ -199,14 +216,10 @@ export async function runSurvivalTest(
             
             if (playerEval.isBust) {
               // Busted after swap
-              const activeTrait = player.traits.find(t => !t.busted);
+              const chosenTrait = await ui.promptBustedTraitSelection(player);
               let damageTaken: string | undefined;
-              if (activeTrait) {
-                activeTrait.busted = true;
-                damageTaken = activeTrait.name;
-                if (!player.traits.some(t => !t.busted)) {
-                  player.isDead = true;
-                }
+              if (chosenTrait) {
+                damageTaken = damageTrait(player, chosenTrait.name) || undefined;
               }
               return {
                 outcome: 'BUST',
@@ -249,10 +262,35 @@ export async function runSurvivalTest(
     }
 
     if (dealerEval.total > playerEval.total) {
+      // Narrate dealer win
+      gameStateStore.logMessage(`The Dealer beats your score (${dealerEval.total} vs ${playerEval.total}). The struggle continues...`);
+      gameEventBus.emit('narrative_triggered', {
+        type: 'RISING_TENSION',
+        context: {
+          characterName: player.name,
+        }
+      });
+      // Show intermediate result
+      await ui.showTestResult({
+        outcome: 'LOSE',
+        finalPlayerTotal: playerEval.total,
+        finalDealerTotal: dealerEval.total,
+        traitsExhausted: []
+      }, true);
+
       // Dealer wins: increase tension, start next round of the test
       tension++;
       continue;
     } else if (dealerEval.total === playerEval.total) {
+      // Narrate push
+      gameStateStore.logMessage(`Push! (${dealerEval.total} vs ${playerEval.total}). The struggle continues...`);
+      await ui.showTestResult({
+        outcome: 'PUSH',
+        finalPlayerTotal: playerEval.total,
+        finalDealerTotal: dealerEval.total,
+        traitsExhausted: []
+      }, true);
+
       // Push: re-deal hand without increasing tension
       continue;
     }

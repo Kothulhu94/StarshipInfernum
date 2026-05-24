@@ -64,3 +64,64 @@ export function promptTraitSelection(character: Character): Promise<Trait | null
     });
   });
 }
+
+/**
+ * Prompts a player to select one of their non-busted traits to permanently bust (damage).
+ * No cancel button is provided. Returns the selected Trait.
+ */
+export function promptBustedTraitSelection(character: Character): Promise<Trait | null> {
+  const available = character.traits.filter((t) => !t.busted);
+  if (available.length === 0) return Promise.resolve(null);
+  if (available.length === 1) return Promise.resolve(available[0]);
+  if (character.isAI) {
+    return Promise.resolve(available[0]);
+  }
+
+  // Create temporary modal dialog
+  const dialog = document.createElement('dialog');
+  dialog.className = 'modal';
+  dialog.style.maxWidth = '360px';
+
+  const optionsHtml = available
+    .map(
+      (t) => `
+    <button class="settings-button btn-select-busted-trait" data-name="${t.name}" style="width: 100%; text-align: left; display: flex; justify-content: space-between; margin-bottom: var(--space-xs);">
+      <span>${t.name}</span>
+      <span style="color: var(--color-damage-red); font-family: var(--font-mono); font-weight: bold;">
+        ${t.modifier > 0 ? '+' : ''}${t.modifier}
+      </span>
+    </button>
+  `
+    )
+    .join('');
+
+  dialog.innerHTML = `
+    <h3 class="modal__title" style="margin-bottom: var(--space-md); font-size: var(--font-size-md); color: var(--color-damage-red);">Select Trait to BUST (Lose permanently)</h3>
+    <div style="display: flex; flex-direction: column;">
+      ${optionsHtml}
+    </div>
+  `;
+
+  document.body.appendChild(dialog);
+  dialog.showModal();
+
+  return new Promise((resolve) => {
+    const cleanup = () => {
+      dialog.close();
+      dialog.remove();
+    };
+
+    dialog.querySelectorAll('.btn-select-busted-trait').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const name = (e.currentTarget as HTMLElement).getAttribute('data-name');
+        const trait = available.find((t) => t.name === name) || null;
+        cleanup();
+        resolve(trait);
+      });
+    });
+
+    dialog.addEventListener('cancel', (e) => {
+      e.preventDefault();
+    });
+  });
+}
