@@ -9,7 +9,7 @@
   box-shadow: var(--shadow-panel), var(--shadow-glow-cyan);
   color: var(--color-text-primary);
   padding: var(--space-xl);
-  max-width: 480px;
+  max-width: 600px;
   width: 90vw;
   backdrop-filter: blur(var(--glass-blur));
 }
@@ -85,7 +85,7 @@
   border: var(--border-thin);
   border-radius: var(--radius-sm);
   padding: var(--space-2xs) var(--space-xs);
-  min-width: 180px;
+  min-width: 260px;
 }
 
 .settings-field__select:focus,

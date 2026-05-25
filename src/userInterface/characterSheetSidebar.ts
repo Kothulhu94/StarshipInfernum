@@ -36,7 +36,7 @@ function renderCrewRoster(state: GameState): void {
         return `
         <div class="trait-item ${statusClass}" data-tooltip="${escapeHtml(tooltip)}">
           <span class="trait-item__name">${t.name}</span>
-          <span class="trait-item__val">${t.modifier > 0 ? '+' : ''}${t.modifier}</span>
+          <span class="trait-item__val">±${Math.abs(t.modifier)}</span>
         </div>
       `;
       })

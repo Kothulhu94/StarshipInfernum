@@ -15,6 +15,7 @@ import { MapInteractionHandler } from './mapInteractionHandler';
 import { paintRoom } from './roomTilePainter';
 import { paintCorridor } from './corridorTilePainter';
 import { paintRoomIconOverlays } from './roomIconOverlays';
+import { RestZoneIndicatorRenderer } from './restZoneIndicatorRenderer';
 
 export class ShipMapScene extends Phaser.Scene {
   private graphics!: Phaser.GameObjects.Graphics;
@@ -23,6 +24,7 @@ export class ShipMapScene extends Phaser.Scene {
   private cameraController!: MapCameraController;
   private tokenRenderer!: CharacterTokenRenderer;
   private interactionHandler!: MapInteractionHandler;
+  private restIndicatorRenderer!: RestZoneIndicatorRenderer;
 
   // Active Map State
   private graph?: RoomNodeGraph;
@@ -66,6 +68,7 @@ export class ShipMapScene extends Phaser.Scene {
     this.cameraController = new MapCameraController(this);
     this.tokenRenderer = new CharacterTokenRenderer();
     this.interactionHandler = new MapInteractionHandler();
+    this.restIndicatorRenderer = new RestZoneIndicatorRenderer();
 
     // Initial camera size adjustment
     this.cameras.main.setSize(this.scale.width, this.scale.height);
@@ -146,6 +149,7 @@ export class ShipMapScene extends Phaser.Scene {
       // Clear current deck graphic tokens
       this.tokenRenderer.clear();
       this.interactionHandler.clear();
+      this.restIndicatorRenderer.clear();
     }
 
     this.renderMap();
@@ -189,6 +193,9 @@ export class ShipMapScene extends Phaser.Scene {
 
     // 3. Paint active hazards and item markers
     paintRoomIconOverlays(this.graphics, roomsOnDeck, this.activeObstacleRoomIds);
+
+    // Paint rest indicators for Airlocks/Safety Rooms
+    this.restIndicatorRenderer.updateIndicators(this, roomsOnDeck, this.deckContainer);
 
     // 4. Update Interactive Zones
     this.interactionHandler.setupInteractions(

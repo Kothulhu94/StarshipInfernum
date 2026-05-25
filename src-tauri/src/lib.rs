@@ -1,10 +1,10 @@
 use std::sync::Mutex;
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
-use tauri_plugin_shell::process::{CommandEvent, Child};
+use tauri_plugin_shell::process::{CommandEvent, CommandChild};
 
 pub struct LlmServerState {
-  pub child: Mutex<Option<Child>>,
+  pub child: Mutex<Option<CommandChild>>,
   pub current_model: Mutex<String>,
 }
 
@@ -25,7 +25,7 @@ fn spawn_sidecar(
   // 1. Kill old process if exists
   {
     let mut child_guard = state.child.lock().unwrap();
-    if let Some(mut child) = child_guard.take() {
+    if let Some(child) = child_guard.take() {
       let _ = child.kill();
     }
   }
@@ -39,7 +39,17 @@ fn spawn_sidecar(
   let path_str = if model_path.exists() {
     model_path.to_string_lossy().to_string()
   } else {
-    format!("models/{}", model_name)
+    let rel_path = format!("models/{}", model_name);
+    if std::path::Path::new(&rel_path).exists() {
+      rel_path
+    } else {
+      return Err(format!(
+        "Model file '{}' was not found on disk.\n\nChecked paths:\n1. {}\n2. {}\n\nPlease place the GGUF file in your 'src-tauri/models/' directory.",
+        model_name,
+        model_path.to_string_lossy(),
+        std::path::Path::new(&rel_path).canonicalize().map(|p| p.to_string_lossy().to_string()).unwrap_or(rel_path)
+      ));
+    }
   };
 
   log::info!("Spawning llama-server with model: {}", path_str);
@@ -143,6 +153,20 @@ async fn swap_model(
   Ok(model_name)
 }
 
+#[tauri::command]
+fn is_server_running(state: tauri::State<'_, LlmServerState>) -> bool {
+  state.child.lock().unwrap().is_some()
+}
+
+#[tauri::command]
+fn stop_server(state: tauri::State<'_, LlmServerState>) -> Result<(), String> {
+  let mut child_guard = state.child.lock().unwrap();
+  if let Some(child) = child_guard.take() {
+    let _ = child.kill();
+  }
+  Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -174,7 +198,9 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       get_current_model,
       get_available_models,
-      swap_model
+      swap_model,
+      is_server_running,
+      stop_server
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

@@ -54,7 +54,7 @@ export function promptTraitSelection(
               cursor: pointer; display: flex; align-items: center; justify-content: center;
               flex-shrink: 0; transition: all 0.15s ease;
             "
-          >${sign}</button>
+          >±</button>
         </div>
       `;
     }).join('');
@@ -148,7 +148,7 @@ export function promptBustedTraitSelection(character: Character): Promise<Trait 
     <button class="settings-button btn-select-busted-trait" data-name="${t.name}" style="width: 100%; text-align: left; display: flex; justify-content: space-between; margin-bottom: var(--space-xs);">
       <span>${t.name}</span>
       <span style="color: var(--color-damage-red); font-family: var(--font-mono); font-weight: bold;">
-        ${t.modifier > 0 ? '+' : ''}${t.modifier}
+        ±${Math.abs(t.modifier)}
       </span>
     </button>
   `

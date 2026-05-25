@@ -238,20 +238,13 @@ function refreshMapLayout(): void {
 /* ─── Action / Exploration Controls ───────────────────── */
 
 function initExplorationControls(): void {
-  const btnN = document.getElementById('btn-explore-n');
-  const btnS = document.getElementById('btn-explore-s');
-  const btnE = document.getElementById('btn-explore-e');
-  const btnW = document.getElementById('btn-explore-w');
-  const btnCrisis = document.getElementById('btn-attempt-crisis');
-  const btnRest = document.getElementById('btn-safety-rest');
-
-  btnN?.addEventListener('click', () => turnSequencer.exploreDoor('N'));
-  btnS?.addEventListener('click', () => turnSequencer.exploreDoor('S'));
-  btnE?.addEventListener('click', () => turnSequencer.exploreDoor('E'));
-  btnW?.addEventListener('click', () => turnSequencer.exploreDoor('W'));
-
-  btnCrisis?.addEventListener('click', () => turnSequencer.attemptCrisisStep(cardTableOverlay));
-  btnRest?.addEventListener('click', () => turnSequencer.restInSafetyRoom(cardTableOverlay));
+  const addClick = (id: string, fn: () => void) => document.getElementById(id)?.addEventListener('click', fn);
+  addClick('btn-explore-n', () => turnSequencer.exploreDoor('N'));
+  addClick('btn-explore-s', () => turnSequencer.exploreDoor('S'));
+  addClick('btn-explore-e', () => turnSequencer.exploreDoor('E'));
+  addClick('btn-explore-w', () => turnSequencer.exploreDoor('W'));
+  addClick('btn-attempt-crisis', () => turnSequencer.attemptCrisisStep(cardTableOverlay));
+  addClick('btn-safety-rest', () => turnSequencer.restInSafetyRoom(cardTableOverlay));
 }
 
 /* ─── Adjustable Game Panels ──────────────────────────── */
@@ -283,9 +276,7 @@ function clamp(value: number, min: number, max: number): number {
 
 function loadPanelLayoutSettings(): PanelLayoutSettings {
   try {
-    const stored = window.localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY);
-    if (!stored) return { ...PANEL_LAYOUT_DEFAULTS };
-    return { ...PANEL_LAYOUT_DEFAULTS, ...JSON.parse(stored) };
+    return { ...PANEL_LAYOUT_DEFAULTS, ...JSON.parse(window.localStorage.getItem(PANEL_LAYOUT_STORAGE_KEY) || '{}') };
   } catch {
     return { ...PANEL_LAYOUT_DEFAULTS };
   }
@@ -443,6 +434,18 @@ function boot(): void {
   // Wires state updates to ShipMapScene
   gameEventBus.on('state_updated', (state) => {
     triggerPhaserStateUpdate(state);
+
+    const btnRest = document.getElementById('btn-safety-rest');
+    if (btnRest) {
+      const activeChar = state.characters.find((c: any) => c.id === state.activeCharacterId);
+      const graph = gameStateStore.getMapGraph();
+      const currentRoom = activeChar?.roomId ? graph.getRoom(activeChar.roomId) : null;
+      const isRestRoom = currentRoom && (
+        currentRoom.roomType.toLowerCase().includes('airlock') ||
+        currentRoom.roomType.toLowerCase().includes('safety')
+      );
+      btnRest.style.display = isRestRoom ? 'inline-block' : 'none';
+    }
   });
 
   /* Exploration panels controls */

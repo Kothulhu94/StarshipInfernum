@@ -89,11 +89,51 @@ class TooltipManager {
     this.tooltipEl.style.left = `${left}px`;
   }
 
+  /**
+   * Shows the tooltip at an absolute viewport/client coordinate (e.g. from Phaser pointer events).
+   */
+  public showAbsolute(clientX: number, clientY: number, text: string) {
+    if (!this.tooltipEl) return;
+
+    this.tooltipEl.innerHTML = text;
+    this.tooltipEl.style.visibility = 'visible';
+    this.tooltipEl.style.opacity = '1';
+
+    const tooltipRect = this.tooltipEl.getBoundingClientRect();
+    let top = window.scrollY + clientY - tooltipRect.height - 12;
+    let left = window.scrollX + clientX - tooltipRect.width / 2;
+
+    this.tooltipEl.style.transform = 'translateY(-5px)';
+
+    // If too high up, show below client coordinates instead
+    if (clientY - tooltipRect.height < 10) {
+      top = window.scrollY + clientY + 12;
+      this.tooltipEl.style.transform = 'translateY(5px)';
+    }
+
+    // Horizontal boundary safety checks
+    if (left < 10) {
+      left = 10;
+    } else if (left + tooltipRect.width > window.innerWidth - 10) {
+      left = window.innerWidth - tooltipRect.width - 10;
+    }
+
+    this.tooltipEl.style.top = `${top}px`;
+    this.tooltipEl.style.left = `${left}px`;
+  }
+
   private hide() {
     if (!this.tooltipEl) return;
     this.tooltipEl.style.opacity = '0';
     this.tooltipEl.style.visibility = 'hidden';
     this.tooltipEl.style.transform = 'translateY(0)';
+  }
+
+  /**
+   * Hides the active tooltip programmatically.
+   */
+  public hideExternal() {
+    this.hide();
   }
 }
 

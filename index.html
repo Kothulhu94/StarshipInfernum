@@ -141,7 +141,7 @@
           <button id="btn-explore-e" class="settings-button" style="margin: 0;">Explore E</button>
           <button id="btn-explore-w" class="settings-button" style="margin: 0;">Explore W</button>
           <button id="btn-attempt-crisis" class="settings-button" style="margin: 0; color: var(--color-alert-amber);">Crisis Step</button>
-          <button id="btn-safety-rest" class="settings-button" style="margin: 0; color: var(--color-success-green);">Rest</button>
+          <button id="btn-safety-rest" class="settings-button" style="margin: 0; color: var(--color-success-green); display: none;" data-tooltip="<strong>Rest</strong><br/>Resting allows a crew member to recover an exhausted trait. If any crewmate has died, this requires passing a Simple Test with automatic Rising Tension.">Rest</button>
         </div>
       </main>
       <!-- RIGHT: Crisis Clock + Active Crises -->
@@ -262,7 +262,10 @@
           <div id="model-recommendation-info" class="settings-field__info-text">
             Checking model file availability...
           </div>
-          <button id="btn-swap-model" type="button" class="settings-button" style="width: 100%; display: block; margin-top: var(--space-xs);">Apply & Load Model</button>
+          <div style="display: flex; gap: var(--space-xs); margin-top: var(--space-xs);">
+            <button id="btn-swap-model" type="button" class="settings-button" style="flex: 1; margin-top: 0;">Apply & Load</button>
+            <button id="btn-toggle-server" type="button" class="settings-button" style="flex: 1; margin-top: 0;">Launch Server</button>
+          </div>
         </div>
 
         <!-- Container for External Kobold Settings -->

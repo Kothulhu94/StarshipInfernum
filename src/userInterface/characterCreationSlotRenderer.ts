@@ -156,7 +156,7 @@ function buildPregenPreviewHtml(slot: CrewSlotConfig): string {
   const gearTooltip = getGearTooltipText(template.gear);
   const traitsBadges = template.traits.map((trait) => {
     const tooltip = getTraitTooltipText(trait.name, trait.modifier);
-    return `<span class="pregen-preview__trait-badge" data-tooltip="${escapeHtml(tooltip)}">${trait.name} (${trait.modifier > 0 ? '+' : ''}${trait.modifier})</span>`;
+    return `<span class="pregen-preview__trait-badge" data-tooltip="${escapeHtml(tooltip)}">${trait.name} (±${Math.abs(trait.modifier)})</span>`;
   }).join('');
 
   return `

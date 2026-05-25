@@ -141,7 +141,7 @@ export function hasBustMitigatingTrait(
       return false;
     }
     // Only negative modifiers can reduce a bust; check if applying it fixes the total
-    return currentTotal + trait.modifier <= 21;
+    return currentTotal - Math.abs(trait.modifier) <= 21;
   });
 }
 

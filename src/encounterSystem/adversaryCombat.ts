@@ -221,7 +221,7 @@ export async function runAdversaryCombat(
     if (playerEval.isBust && canUseTraitModifier(player, appliedTraitModifier === 0)) {
       const availableTraits = player.traits.filter(t => !t.exhausted && !t.busted);
       if (availableTraits.length > 0) {
-        const action = await ui.promptPlayerAction(player, playerHand, true);
+        const action = await ui.promptPlayerAction(player, playerHand, true, { bustMitigation: true });
         if (typeof action === 'object' && action.type === 'TRAIT') {
           const trait = canUseTraitModifier(player, true)
             ? player.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted)

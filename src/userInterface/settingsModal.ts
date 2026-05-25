@@ -19,15 +19,11 @@ const MODEL_RECOMMENDATIONS: Record<string, string> = {
   'gemma2-9b.gguf': 'Gemma 2 9B: ~5.5 GB. Recommended for 12GB+ VRAM. Excellent coherence and depth.'
 };
 
-async function safeInvoke<T>(cmd: string, args?: any): Promise<T | null> {
-  try {
-    if (typeof window !== 'undefined' && ((window as any).__tauri___currentWindow || (window as any).__TAURI_INTERNALS__)) {
-      return await invoke<T>(cmd, args);
-    }
-  } catch (e) {
-    console.warn(`Tauri command '${cmd}' not available in browser mode:`, e);
+async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
+  if (typeof window !== 'undefined' && ((window as any).__tauri___currentWindow || (window as any).__TAURI_INTERNALS__)) {
+    return await invoke<T>(cmd, args);
   }
-  return null;
+  throw new Error(`Browser simulation: Tauri command '${cmd}' is disabled.`);
 }
 
 export function initSettingsModal(): void {
@@ -41,6 +37,7 @@ export function initSettingsModal(): void {
   const modelSelect = document.getElementById('setting-llm-model') as HTMLSelectElement | null;
   const modelInfoDiv = document.getElementById('model-recommendation-info') as HTMLDivElement | null;
   const swapModelBtn = document.getElementById('btn-swap-model') as HTMLButtonElement | null;
+  const toggleServerBtn = document.getElementById('btn-toggle-server') as HTMLButtonElement | null;
   
   const llmEndpointInput = document.getElementById('setting-llm-endpoint') as HTMLInputElement | null;
   const testLlmBtn = document.getElementById('btn-test-llm') as HTMLButtonElement | null;
@@ -100,6 +97,7 @@ export function initSettingsModal(): void {
         llmStatus.className = 'settings-field__status settings-field__status--disconnected';
       }
     }
+    updateServerBtnState();
   };
 
   const triggerHealthCheck = async () => {
@@ -108,45 +106,91 @@ export function initSettingsModal(): void {
     return connected;
   };
 
+  const updateServerBtnState = async () => {
+    if (!toggleServerBtn) return;
+    try {
+      const isRunning = await safeInvoke<boolean>('is_server_running');
+      if (isRunning) {
+        toggleServerBtn.textContent = 'Stop Server';
+        toggleServerBtn.style.borderColor = 'var(--color-damage-red)';
+      } else {
+        toggleServerBtn.textContent = 'Launch Server';
+        toggleServerBtn.style.borderColor = '';
+      }
+    } catch {
+      toggleServerBtn.textContent = 'Launch Server';
+      toggleServerBtn.style.borderColor = '';
+    }
+  };
+
   // Sidecar Model Management
   const loadAvailableModels = async () => {
-    const models = await safeInvoke<ModelInfo[]>('get_available_models');
-    const activeModelName = await safeInvoke<string>('get_current_model') || 'gemma4-e2b.gguf';
-
     if (modelSelect) {
       modelSelect.innerHTML = '';
-      if (models && models.length > 0) {
-        models.forEach((m) => {
+      try {
+        const models = await safeInvoke<ModelInfo[]>('get_available_models');
+        const activeModelName = await safeInvoke<string>('get_current_model') || 'gemma4-e2b.gguf';
+
+        const downloadedModels = models ? models.filter((m) => m.exists) : [];
+
+        if (downloadedModels.length > 0) {
+          downloadedModels.forEach((m) => {
+            const opt = document.createElement('option');
+            opt.value = m.name;
+            opt.textContent = m.display_name;
+            opt.selected = m.name === activeModelName;
+            modelSelect.appendChild(opt);
+          });
+          
+          modelSelect.disabled = false;
+          if (swapModelBtn) swapModelBtn.disabled = false;
+          if (toggleServerBtn) toggleServerBtn.disabled = false;
+          updateRecommendationText();
+        } else {
+          // No models on disk
           const opt = document.createElement('option');
-          opt.value = m.name;
-          const statusText = m.exists ? 'Downloaded' : 'Missing (Offline fallback)';
-          opt.textContent = `${m.display_name} — ${statusText}`;
-          opt.selected = m.name === activeModelName;
+          opt.value = '';
+          opt.textContent = 'No models detected';
+          opt.disabled = true;
+          opt.selected = true;
           modelSelect.appendChild(opt);
-        });
-      } else {
-        const defaultModels = [
-          { value: 'gemma4-e2b.gguf', label: 'Gemma E2B (2B 4-bit) — Simulation' },
-          { value: 'gemma4-e4b.gguf', label: 'Gemma E4B (4B 4-bit) — Simulation' },
-          { value: 'gemma2-9b.gguf', label: 'Gemma 2 9B (9B 4-bit) — Simulation' }
-        ];
-        defaultModels.forEach((dm) => {
-          const opt = document.createElement('option');
-          opt.value = dm.value;
-          opt.textContent = dm.label;
-          opt.selected = dm.value === activeModelName;
-          modelSelect.appendChild(opt);
-        });
+
+          modelSelect.disabled = true;
+          if (swapModelBtn) swapModelBtn.disabled = true;
+          if (toggleServerBtn) toggleServerBtn.disabled = true;
+
+          if (modelInfoDiv) {
+            modelInfoDiv.innerHTML = '<span style="color: var(--color-alert-amber);">No GGUF models detected in <code>src-tauri/models/</code>. Please place your Gemma files in the directory to enable local AI narration. Fallback narration will be used.</span>';
+          }
+        }
+      } catch (e) {
+        // Browser or fail fallback
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No models detected (Browser Mode)';
+        opt.disabled = true;
+        opt.selected = true;
+        modelSelect.appendChild(opt);
+
+        modelSelect.disabled = true;
+        if (swapModelBtn) swapModelBtn.disabled = true;
+        if (toggleServerBtn) toggleServerBtn.disabled = true;
+
+        if (modelInfoDiv) {
+          modelInfoDiv.innerHTML = '<span style="color: var(--color-alert-amber);">Running in browser mode. Sidecar LLM commands are unavailable. Narration fallback will be used.</span>';
+        }
       }
-      updateRecommendationText();
     }
+    updateServerBtnState();
   };
 
   const updateRecommendationText = () => {
     if (modelSelect && modelInfoDiv) {
       const selected = modelSelect.value;
-      const rec = MODEL_RECOMMENDATIONS[selected] || 'Select a model to view specs.';
-      modelInfoDiv.textContent = rec;
+      if (selected) {
+        const rec = MODEL_RECOMMENDATIONS[selected] || 'Select a model to view specs.';
+        modelInfoDiv.textContent = rec;
+      }
     }
   };
 
@@ -156,7 +200,7 @@ export function initSettingsModal(): void {
 
   if (swapModelBtn) {
     swapModelBtn.addEventListener('click', async () => {
-      if (!modelSelect) return;
+      if (!modelSelect || !modelSelect.value) return;
       const selectedModel = modelSelect.value;
       const originalText = swapModelBtn.textContent;
       
@@ -168,25 +212,89 @@ export function initSettingsModal(): void {
         llmStatus.className = 'settings-field__status settings-field__status--disconnected';
       }
 
-      const result = await safeInvoke<string>('swap_model', { modelName: selectedModel });
-      if (result) {
-        window.localStorage.setItem('starshipInfernum.activeModel', selectedModel);
+      try {
+        const result = await safeInvoke<string>('swap_model', { modelName: selectedModel });
+        if (result) {
+          window.localStorage.setItem('starshipInfernum.activeModel', selectedModel);
+        }
+        
+        let connected = false;
+        for (let i = 0; i < 4; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          connected = await triggerHealthCheck();
+          if (connected) break;
+        }
+
+        if (connected) {
+          alert(`Successfully loaded and swapped to ${selectedModel}!`);
+        } else {
+          alert(`Request sent to load ${selectedModel}, but server took too long to respond. It may still be loading weights.`);
+        }
+      } catch (err: any) {
+        const errMsg = err.message || String(err);
+        alert(`Failed to swap model:\n\n${errMsg}`);
+        if (llmStatus) {
+          llmStatus.textContent = 'Launch Failed';
+          llmStatus.className = 'settings-field__status settings-field__status--disconnected';
+        }
+      } finally {
+        swapModelBtn.disabled = false;
+        swapModelBtn.textContent = originalText;
+        updateServerBtnState();
+      }
+    });
+  }
+
+  if (toggleServerBtn) {
+    toggleServerBtn.addEventListener('click', async () => {
+      let isRunning = false;
+      try {
+        isRunning = await safeInvoke<boolean>('is_server_running');
+      } catch {
+        isRunning = false;
       }
       
-      let connected = false;
-      for (let i = 0; i < 4; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        connected = await triggerHealthCheck();
-        if (connected) break;
-      }
+      toggleServerBtn.disabled = true;
+      
+      try {
+        if (isRunning) {
+          toggleServerBtn.textContent = 'Stopping...';
+          await safeInvoke<void>('stop_server');
+          await triggerHealthCheck();
+          alert('Server stopped successfully.');
+        } else {
+          if (!modelSelect || !modelSelect.value) return;
+          const selectedModel = modelSelect.value;
+          toggleServerBtn.textContent = 'Launching...';
+          if (llmStatus) {
+            llmStatus.textContent = 'Launching Server...';
+            llmStatus.className = 'settings-field__status settings-field__status--disconnected';
+          }
+          await safeInvoke<string>('swap_model', { modelName: selectedModel });
+          
+          let connected = false;
+          for (let i = 0; i < 4; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            connected = await triggerHealthCheck();
+            if (connected) break;
+          }
 
-      swapModelBtn.disabled = false;
-      swapModelBtn.textContent = originalText;
-
-      if (connected) {
-        alert(`Successfully loaded and swapped to ${selectedModel}!`);
-      } else {
-        alert(`Request sent to load ${selectedModel}, but server took too long to respond. It may still be loading weights.`);
+          if (connected) {
+            alert('Server launched successfully!');
+          } else {
+            alert('Server started, but took too long to report healthy. It might still be loading.');
+          }
+        }
+      } catch (err: any) {
+        const errMsg = err.message || String(err);
+        alert(`Server operation failed:\n\n${errMsg}`);
+        if (llmStatus) {
+          llmStatus.textContent = 'Launch Failed';
+          llmStatus.className = 'settings-field__status settings-field__status--disconnected';
+        }
+      } finally {
+        toggleServerBtn.disabled = false;
+        await updateServerBtnState();
       }
     });
   }
@@ -212,14 +320,18 @@ export function initSettingsModal(): void {
   loadAvailableModels().then(async () => {
     if (koboldClient.getProvider() === 'sidecar') {
       const storedModel = window.localStorage.getItem('starshipInfernum.activeModel');
-      const activeModelName = await safeInvoke<string>('get_current_model');
-      if (storedModel && activeModelName && storedModel !== activeModelName) {
-        console.log(`Restoring active model: ${storedModel}`);
-        if (llmStatus) {
-          llmStatus.textContent = 'Loading Preferred Model...';
+      try {
+        const activeModelName = await safeInvoke<string>('get_current_model');
+        if (storedModel && activeModelName && storedModel !== activeModelName) {
+          console.log(`Restoring active model: ${storedModel}`);
+          if (llmStatus) {
+            llmStatus.textContent = 'Loading Preferred Model...';
+          }
+          await safeInvoke<string>('swap_model', { modelName: storedModel });
+          triggerHealthCheck();
         }
-        await safeInvoke<string>('swap_model', { modelName: storedModel });
-        triggerHealthCheck();
+      } catch (e) {
+        console.warn('Failed to restore active model:', e);
       }
     }
   });
