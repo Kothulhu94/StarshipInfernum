@@ -239,16 +239,45 @@
       </fieldset>
 
       <fieldset class="settings-group">
-        <legend class="settings-group__legend">AI Dealer (KoboldCpp)</legend>
+        <legend class="settings-group__legend">AI Inference Engine</legend>
+        
         <label class="settings-field">
-          <span class="settings-field__label">Endpoint</span>
-          <input id="setting-llm-endpoint" type="url" class="settings-field__input" value="http://localhost:5001" placeholder="http://localhost:5001" />
+          <span class="settings-field__label">Backend Provider</span>
+          <select id="setting-llm-provider" class="settings-field__select">
+            <option value="sidecar" selected>Local Sidecar (Tauri)</option>
+            <option value="external">External Server (KoboldCpp)</option>
+          </select>
         </label>
-        <label class="settings-field">
+
+        <!-- Container for Local Sidecar Settings -->
+        <div id="llm-sidecar-settings" class="settings-subgroup">
+          <label class="settings-field">
+            <span class="settings-field__label">Active Model</span>
+            <select id="setting-llm-model" class="settings-field__select">
+              <option value="gemma4-e2b.gguf">Gemma E2B (2B 4-bit) — Checking...</option>
+              <option value="gemma4-e4b.gguf">Gemma E4B (4B 4-bit) — Checking...</option>
+              <option value="gemma2-9b.gguf">Gemma 2 9B (9B 4-bit) — Checking...</option>
+            </select>
+          </label>
+          <div id="model-recommendation-info" class="settings-field__info-text">
+            Checking model file availability...
+          </div>
+          <button id="btn-swap-model" type="button" class="settings-button" style="width: 100%; display: block; margin-top: var(--space-xs);">Apply & Load Model</button>
+        </div>
+
+        <!-- Container for External Kobold Settings -->
+        <div id="llm-external-settings" class="settings-subgroup" style="display: none;">
+          <label class="settings-field">
+            <span class="settings-field__label">Endpoint URL</span>
+            <input id="setting-llm-endpoint" type="url" class="settings-field__input" value="http://localhost:5001" placeholder="http://localhost:5001" />
+          </label>
+          <button id="btn-test-llm" type="button" class="settings-button" style="width: 100%; display: block; margin-top: var(--space-xs);">Test Connection</button>
+        </div>
+
+        <label class="settings-field" style="margin-top: var(--space-sm); border-top: 1px rgba(255,255,255,0.05) solid; padding-top: var(--space-xs);">
           <span class="settings-field__label">Status</span>
           <span id="llm-status" class="settings-field__status settings-field__status--disconnected">Disconnected</span>
         </label>
-        <button id="btn-test-llm" type="button" class="settings-button">Test Connection</button>
       </fieldset>
 
       <fieldset class="settings-group">

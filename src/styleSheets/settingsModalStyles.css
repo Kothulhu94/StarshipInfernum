@@ -147,3 +147,23 @@
   gap: var(--space-xs);
   margin-top: var(--space-sm);
 }
+
+.settings-subgroup {
+  margin-top: var(--space-sm);
+  padding: var(--space-xs);
+  background: hsla(220, 20%, 3%, 0.3);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.settings-field__info-text {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-xs);
+  line-height: var(--line-height-relaxed);
+  padding: var(--space-2xs) var(--space-xs);
+  border-left: 2px solid var(--color-console-cyan-dim);
+  background: hsla(180, 50%, 50%, 0.03);
+}
+
