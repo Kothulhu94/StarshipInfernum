@@ -8,12 +8,10 @@ export type CrisisAttemptTarget =
   | {
       type: 'MAJOR';
       state: MajorCrisisState;
-      isFinalCardTest: boolean;
     }
   | {
       type: 'MINOR';
       state: MinorCrisisState;
-      isFinalCardTest: boolean;
     };
 
 export interface CrisisAttemptDecision {
@@ -59,13 +57,7 @@ function evaluateMajorTarget(state: GameState, room: RoomNode): CrisisAttemptDec
     return { target: null, reason: 'Missing Crewmates must be resolved before the Major Crisis can progress.' };
   }
 
-  const isFinalCardTest = major.jokersRemaining <= 0;
-  if (isFinalCardTest) {
-    if (isFinalBlockedByRoom(major, room.id)) {
-      return { target: null, reason: 'Final crisis-card tests must be attempted in a different room.' };
-    }
-    return { target: { type: 'MAJOR', state: major, isFinalCardTest } };
-  }
+
 
   if (wasStepCompletedInRoom(major, room.id)) {
     return { target: null, reason: 'This room has already produced a successful Major Crisis step.' };
@@ -73,7 +65,7 @@ function evaluateMajorTarget(state: GameState, room: RoomNode): CrisisAttemptDec
 
   const definition = MAJOR_CRISIS_REGISTRY[major.id];
   if (roomMatchesName(room, definition.resolutionRooms) || roomHasRoomObstacleMatch(room)) {
-    return { target: { type: 'MAJOR', state: major, isFinalCardTest } };
+    return { target: { type: 'MAJOR', state: major } };
   }
   return { target: null };
 }
@@ -82,13 +74,7 @@ function evaluateMinorTarget(state: GameState, room: RoomNode): CrisisAttemptDec
   const minor = state.minorCrisisState;
   if (!minor || minor.isResolved) return { target: null };
 
-  const isFinalCardTest = minor.jokersRemaining <= 0;
-  if (isFinalCardTest) {
-    if (isFinalBlockedByRoom(minor, room.id)) {
-      return { target: null, reason: 'Final crisis-card tests must be attempted in a different room.' };
-    }
-    return { target: { type: 'MINOR', state: minor, isFinalCardTest } };
-  }
+
 
   if (wasStepCompletedInRoom(minor, room.id)) {
     return { target: null, reason: 'This room has already produced a successful Minor Crisis step.' };
@@ -96,7 +82,7 @@ function evaluateMinorTarget(state: GameState, room: RoomNode): CrisisAttemptDec
 
   const definition = MINOR_CRISIS_REGISTRY[minor.id];
   if (roomMatchesName(room, definition.resolutionRooms) || roomHasRoomObstacleMatch(room)) {
-    return { target: { type: 'MINOR', state: minor, isFinalCardTest } };
+    return { target: { type: 'MINOR', state: minor } };
   }
   return { target: null };
 }

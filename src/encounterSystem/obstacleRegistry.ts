@@ -1,4 +1,6 @@
 import { ObstacleDefinition } from './encounterTypes';
+import { ScenarioConfig } from '@scenarioData/scenarioTypes';
+import { getScenarioAdversaryByCard } from './adversaryScenarioRules';
 
 export interface RoomDefinition {
   cardCode: string;
@@ -461,3 +463,25 @@ export const OBSTACLE_REGISTRY: Record<string, ObstacleDefinition> = {
     specialRules: []
   }
 };
+
+export function getHydratedObstacle(cardCode: string, scenario: ScenarioConfig | null): ObstacleDefinition | undefined {
+  const baseObstacle = OBSTACLE_REGISTRY[cardCode];
+  if (!baseObstacle) return undefined;
+
+  if (baseObstacle.type === 'ADVERSARY') {
+    let level: 1 | 2 | 3 = 1;
+    if (baseObstacle.name.includes('Level 2')) level = 2;
+    if (baseObstacle.name.includes('Level 3')) level = 3;
+
+    const adversary = getScenarioAdversaryByCard(cardCode, level, scenario);
+    
+    return {
+      ...baseObstacle,
+      name: `${adversary.name} (Level ${level})`,
+      flavorText: adversary.description,
+      rulesText: baseObstacle.rulesText + (adversary.level3AbilityDesc ? ` ${adversary.level3AbilityName}: ${adversary.level3AbilityDesc}` : '')
+    };
+  }
+
+  return baseObstacle;
+}

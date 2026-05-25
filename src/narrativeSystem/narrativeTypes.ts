@@ -21,6 +21,7 @@ export interface PromptContext {
   roomName?: string;
   obstacleName?: string;
   adversaryName?: string;
+  scenarioId?: string;
   extraContext?: string;
 }
 

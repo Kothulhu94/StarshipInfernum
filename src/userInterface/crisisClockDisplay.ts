@@ -1,11 +1,36 @@
 import { gameEventBus } from '@gameFlow/gameEventBus';
 import { GameState } from '@gameFlow/gameFlowTypes';
+import { showCrisisDescriptionModal } from './crisisDescriptionModal';
+
+// Keep track of the current state so click handlers can access it
+let currentState: GameState | null = null;
 
 export function initCrisisClockDisplay(): void {
   // Listen for clock updates
   gameEventBus.on('state_updated', (state: GameState) => {
+    currentState = state;
     updateCrisisDisplay(state);
   });
+
+  // Setup click listeners for crisis cards
+  const majorSlot = document.getElementById('major-crisis-slot');
+  const minorSlot = document.getElementById('minor-crisis-slot');
+
+  if (majorSlot) {
+    majorSlot.addEventListener('click', () => {
+      if (currentState?.majorCrisisState) {
+        showCrisisDescriptionModal(currentState.majorCrisisState.id, 'MAJOR');
+      }
+    });
+  }
+
+  if (minorSlot) {
+    minorSlot.addEventListener('click', () => {
+      if (currentState?.minorCrisisState) {
+        showCrisisDescriptionModal(currentState.minorCrisisState.id, 'MINOR');
+      }
+    });
+  }
 }
 
 function updateCrisisDisplay(state: GameState): void {
@@ -13,17 +38,22 @@ function updateCrisisDisplay(state: GameState): void {
   const reelCounter = document.getElementById('reel-counter');
   
   const majorName = document.getElementById('major-crisis-name');
-  const majorJokers = document.getElementById('major-crisis-jokers');
+  const majorSteps = document.getElementById('major-crisis-jokers');
   const majorSlot = document.getElementById('major-crisis-slot');
 
   const minorName = document.getElementById('minor-crisis-name');
-  const minorJokers = document.getElementById('minor-crisis-jokers');
+  const minorSteps = document.getElementById('minor-crisis-jokers');
   const minorSlot = document.getElementById('minor-crisis-slot');
 
   if (clockContainer) {
     clockContainer.innerHTML = '';
     const total = state.crisisClockTokensTotal;
     const remaining = state.crisisClockTokensRemaining;
+
+    const countdown = document.getElementById('crisis-clock-countdown');
+    if (countdown) {
+      countdown.textContent = `${remaining} / ${total}`;
+    }
 
     for (let i = 0; i < total; i++) {
       const token = document.createElement('div');
@@ -50,10 +80,10 @@ function updateCrisisDisplay(state: GameState): void {
     if (majorName) {
       majorName.textContent = state.majorCrisisState.id.replace('_', ' ');
     }
-    if (majorJokers) {
-      majorJokers.textContent = state.majorCrisisState.isResolved
+    if (majorSteps) {
+      majorSteps.textContent = state.majorCrisisState.isResolved
         ? 'Resolved'
-        : `Jokers: ${state.majorCrisisState.jokersRemaining}`;
+        : `Remaining: ${state.majorCrisisState.jokersRemaining}`;
     }
     if (majorSlot) {
       if (state.majorCrisisState.isResolved) {
@@ -69,10 +99,10 @@ function updateCrisisDisplay(state: GameState): void {
     if (minorName) {
       minorName.textContent = state.minorCrisisState.id.replace('_', ' ');
     }
-    if (minorJokers) {
-      minorJokers.textContent = state.minorCrisisState.isResolved
+    if (minorSteps) {
+      minorSteps.textContent = state.minorCrisisState.isResolved
         ? 'Resolved'
-        : `Jokers: ${state.minorCrisisState.jokersRemaining}`;
+        : `Remaining: ${state.minorCrisisState.jokersRemaining}`;
     }
     if (minorSlot) {
       if (state.minorCrisisState.isResolved) {

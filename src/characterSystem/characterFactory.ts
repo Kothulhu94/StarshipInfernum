@@ -1,4 +1,4 @@
-import { Character, AptitudeType, Gear, Trait } from './characterTypes';
+import { Character, AptitudeType, Gear, Trait, AIPersonality } from './characterTypes';
 import { PREGEN_ROSTER } from './pregenRoster';
 
 /**
@@ -11,6 +11,26 @@ function generateId(): string {
 /**
  * Creates a new Character with default states.
  */
+export function generateRandomAIProfile(): AIPersonality {
+  const riskTolerances: ('cautious' | 'balanced' | 'reckless')[] = ['cautious', 'balanced', 'reckless'];
+  const gearStyles: ('selfish' | 'altruistic' | 'tactical')[] = ['selfish', 'altruistic', 'tactical'];
+  const explosiveStyles: ('reckless' | 'cautious')[] = ['reckless', 'cautious'];
+  const weaponStyles: ('aggressive' | 'defensive')[] = ['aggressive', 'defensive'];
+  const spacesuitStyles: ('selfish' | 'altruistic')[] = ['selfish', 'altruistic'];
+
+  return {
+    crisisPropensity: Math.random(),
+    explorationDrive: Math.random(),
+    riskTolerance: riskTolerances[Math.floor(Math.random() * riskTolerances.length)],
+    gearPreferences: {
+      medkit: gearStyles[Math.floor(Math.random() * gearStyles.length)],
+      weapon: weaponStyles[Math.floor(Math.random() * weaponStyles.length)],
+      explosive: explosiveStyles[Math.floor(Math.random() * explosiveStyles.length)],
+      spacesuit: spacesuitStyles[Math.floor(Math.random() * spacesuitStyles.length)]
+    }
+  };
+}
+
 export function createCharacter(config: {
   name: string;
   concept: string;
@@ -18,6 +38,7 @@ export function createCharacter(config: {
   traits: Trait[];
   gear?: Gear;
   isAI?: boolean;
+  aiProfile?: AIPersonality;
 }): Character {
   return {
     id: generateId(),
@@ -27,7 +48,8 @@ export function createCharacter(config: {
     aptitude: config.aptitude,
     gear: config.gear || null,
     isDead: false,
-    isAI: config.isAI || false
+    isAI: config.isAI || false,
+    aiProfile: config.aiProfile || (config.isAI ? generateRandomAIProfile() : undefined)
   };
 }
 
@@ -49,7 +71,8 @@ export function createPregenCharacter(pregenName: string, isAI: boolean = false)
     aptitude: template.aptitude,
     gear: template.gear,
     isDead: false,
-    isAI
+    isAI,
+    aiProfile: template.aiProfile
   };
 }
 
@@ -57,8 +80,10 @@ export function createPregenCharacter(pregenName: string, isAI: boolean = false)
  * Generates a completely random custom character (useful for quick start or random AI NPCs).
  */
 export function createRandomCharacter(isAI: boolean = false): Character {
-  const firstNames = ['John', 'Sarah', 'Kaelen', 'Elena', 'Marcus', 'Li', 'Alistair', 'Nadia', 'Darius', 'Vesper'];
-  const lastNames = ['Shepard', 'Riddick', 'Ripley', 'O\'Connor', 'Chen', 'Vance', 'Mercer', 'Cooper', 'Thorne', 'Aurelia'];
+  const firstSyllables = ["Ves", "Dak", "Kor", "Nim", "Zal", "Tev", "Brek", "Ral", "Cen", "Mor", "Jax", "Quin", "Yor", "Zan"];
+  const secondSyllables = ["rin", "tar", "las", "na", "to", "vek", "lis", "dor", "ka", "th", "on", "us"];
+  const lastNames = ["Obal", "Kesh", "Tarn", "Riker", "Drax", "Surn", "Voss", "Bane", "Cort", "Rey", "Jin"];
+
   const concepts = ['Rookie Pilot', 'Cynical Officer', 'Resourceful Scavenger', 'Hotshot Gunner', 'Absent-minded Tech', 'Stoic Guard'];
   
   const aptitudes: AptitudeType[] = [
@@ -69,7 +94,11 @@ export function createRandomCharacter(isAI: boolean = false): Character {
 
   const gearOptions: Gear[] = [null, 'spacesuit', 'medkit', 'ranged_weapon', 'melee_weapon', 'explosives'];
 
-  const name = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+  const f1 = firstSyllables[Math.floor(Math.random() * firstSyllables.length)];
+  const f2 = secondSyllables[Math.floor(Math.random() * secondSyllables.length)];
+  const l = lastNames[Math.floor(Math.random() * lastNames.length)];
+  const name = `${f1}${f2} ${l}`;
+  
   const concept = concepts[Math.floor(Math.random() * concepts.length)];
   const aptitude = aptitudes[Math.floor(Math.random() * aptitudes.length)];
   const gear = gearOptions[Math.floor(Math.random() * gearOptions.length)];
@@ -88,6 +117,7 @@ export function createRandomCharacter(isAI: boolean = false): Character {
     aptitude,
     gear,
     isDead: false,
-    isAI
+    isAI,
+    aiProfile: isAI ? generateRandomAIProfile() : undefined
   };
 }

@@ -1,39 +1,4 @@
-export const RoomFlavorText: Record<string, string> = {
-  'Airlock': 'Airlocks are the primary method for moving people in and out of the starship and thus serve as the best location for beginning an EVA.',
-  'Alien Pods': 'This room is filled with glistening slime-covered pods that pulsate obscenely and guard a hidden life within them.',
-  'Armory': 'This is one of the most secure rooms on a starship, where small arms and anti-personnel weapons are kept under careful lock and key.',
-  'Brig / Interrogation Room': 'Spartan and purely functional, the brig has a metal floor, blank walls, and little in the way of amenities.',
-  'Cantina / Mess Hall': 'The mess hall serves as the primary dining place for the crew. The lighting is utilitarian and tables are long and communal.',
-  'Cargo Bay': 'A large room near the lowest levels of the ship, containing goods or equipment securely stored for transport.',
-  'Central Server': 'The central server contains the real processing power of the ship. Rows of racked computers spin and churn, dotted with blinking lights.',
-  'Classroom / Training Room': 'Rows of desks face the front of the room where a screen or white board is located, used to teach a new skill.',
-  'Command Bridge': 'The nerve center where the Captain and other officers monitor their vessel. A window or large screen dominates the front wall.',
-  'Communication': 'Dominated by computers dedicated to receiving external radio waves, with workstations for monitoring and recording.',
-  'Crew Quarters': 'A communal or private space that provides a place for the crew to sleep, equipped with cots or beds set into the walls.',
-  'Cryopods': 'Coffin-like pods line the walls, used to keep their occupants in a stable state of suspended animation.',
-  'Garden / Hydro': 'A hydroponic farm where rows of plants grow in vertically stacked containers up and down the walls.',
-  'Gym': 'A workout room with treadmills, stationary bikes, and weight training equipment for the crew.',
-  'Hallway': 'A passage connecting rooms of the ship, large enough for traffic to flow in both directions.',
-  'Hangar Bay': 'A staging area for smaller ships and shuttlecraft with large bay doors that slide open into the vacuum of space.',
-  'Laundry': 'A wet and hazardous location full of automated washers and driers, handling the repair and cleaning of linens.',
-  'Library': 'A repository of knowledge, kept quiet to facilitate reading, lined with shelves and data terminals.',
-  'Lift': 'An elevator large enough to hold several crew members, allowing travel between the different decks.',
-  'Life Support': 'A massive tangle of pipes, vents, and equipment that provides clean water and a breathable atmosphere.',
-  'Lockers / Bathroom': 'A communal facility for hygiene and changing, with limited sightlines and many places to hide.',
-  'Lounge': 'A dimly lit room for entertainment and relaxation, with comfortable seating clustered around small tables.',
-  'Maintenance Tunnel': 'Cramped, cluttered, and rarely lit tunnels that weave unseen through the ship, providing access to essential systems.',
-  'Med Clinic / Sickbay': 'A sterile room filled with diagnostic beds and surgical tools, smelling strongly of antiseptics.',
-  'Power Core': 'The heart of the ship\'s propulsion. Heavy shielding prevents radiation from the fusion reactor from leaking out.',
-  'Ready / War Room': 'A multifunctional space for meetings and planning sessions, dominated by a large table covered in tactical displays.',
-  'Rec Room': 'A place to socialize and unwind, containing ping pong, billiards, and vending machines.',
-  'Repair Shop': 'A workshop lined with tool racks, workbenches, and spare parts for fixing computers and small equipment.',
-  'Robotics': 'A place for charging and storing shipboard robots not currently in use, with painted lines guiding traffic.',
-  'Science Lab': 'A workspace fitted with computers, microscopes, and containment measures for running various experiments.',
-  'Security Headquarters': 'A monitoring station with an array of video screens showing feeds from throughout the starship.',
-  'Storage': 'A minimally lit room containing rows of stocked shelving and stacked crates of expendable supplies.',
-  'Waste Processing': 'A foul-smelling and dirty room containing an incinerator, compost pile, or trash compactor.',
-  'Weapons & Shields': 'A tactical command space lined with displays calculating firing trajectories and modulating shield frequencies.'
-};
+import { RoomFlavorText } from './roomFlavorText';
 
 export const ObstacleFlavorText: Record<string, string> = {
   'Acid': 'The floor is covered in pools of bubbling green acid and those pools are growing larger by the second.',
@@ -103,8 +68,13 @@ export const ScenarioFlavorText: Record<string, string> = {
   'Terror on Holodeck Three': 'A malfunction in the ship\'s dimensional drive has merged the physical ship with terrifying holographic simulations. Nothing is real, but everything can kill you.'
 };
 
-export function getRoomDescription(roomName: string): string {
-  return RoomFlavorText[roomName] || `You enter the ${roomName}.`;
+export function getRoomDescription(roomName: string, scenarioId: string): string {
+  const roomData = RoomFlavorText[roomName];
+  if (roomData && roomData[scenarioId]) {
+    return roomData[scenarioId];
+  }
+  // Fallback if scenario specific text isn't found
+  return `You enter the ${roomName}. It looks eerily quiet.`;
 }
 
 export function getObstacleDescription(obstacleName: string): string {

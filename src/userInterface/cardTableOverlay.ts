@@ -18,58 +18,67 @@ let hasUsedShapeshifterSwap = false;
 let hasUsedSmugglerSwap = false;
 
 export class CardTableOverlay implements TestUI {
-  /**
-   * Translates a Card's Suit to symbol and color CSS class.
-   */
-  private getCardDetails(card: Card): { symbol: string; cssClass: string } {
-    if (card.isJoker) {
-      return { symbol: '🃏', cssClass: 'playing-card--joker' };
+  private playerColorMap = new Map<string, string>();
+  private availableColors = ['#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e84393', '#00cec9', '#fdcb6e'];
+
+  private getPlayerColor(playerId: string, isPlayerOne: boolean): string {
+    if (this.playerColorMap.has(playerId)) {
+      return this.playerColorMap.get(playerId)!;
     }
-    switch (card.suit) {
-      case Suit.HEARTS: return { symbol: '♥', cssClass: 'playing-card--hearts' };
-      case Suit.DIAMONDS: return { symbol: '♦', cssClass: 'playing-card--diamonds' };
-      case Suit.CLUBS: return { symbol: '♣', cssClass: 'playing-card--clubs' };
-      case Suit.SPADES:
-      default:
-        return { symbol: '♠', cssClass: 'playing-card--spades' };
+
+    if (isPlayerOne) {
+      const blue = '#3498db'; // blue
+      this.playerColorMap.set(playerId, blue);
+      return blue;
     }
+
+    // Pick random color
+    if (this.availableColors.length === 0) {
+      return '#ffffff';
+    }
+    const index = Math.floor(Math.random() * this.availableColors.length);
+    const color = this.availableColors.splice(index, 1)[0];
+    this.playerColorMap.set(playerId, color);
+    return color;
   }
 
   /**
    * Helper to create card DOM elements.
    */
-  private createCardElement(card: Card): HTMLElement {
+  private createCardElement(card: Card, color: string): HTMLElement {
     const el = document.createElement('div');
-    const { symbol, cssClass } = this.getCardDetails(card);
     
-    el.className = `playing-card ${cssClass} ${card.faceUp ? 'playing-card--face-up' : ''}`;
+    el.className = 'simple-card-value';
     
-    el.innerHTML = `
-      <div class="playing-card__inner">
-        <div class="playing-card__back"></div>
-        <div class="playing-card__front">
-          <div class="playing-card__corner">
-            <span class="playing-card__rank">${card.isJoker ? 'JK' : card.rank}</span>
-            <span class="playing-card__suit">${symbol}</span>
-          </div>
-          <div class="playing-card__center-suit">${symbol}</div>
-          <div class="playing-card__corner" style="transform: rotate(180deg);">
-            <span class="playing-card__rank">${card.isJoker ? 'JK' : card.rank}</span>
-            <span class="playing-card__suit">${symbol}</span>
-          </div>
-        </div>
-      </div>
-    `;
+    el.style.backgroundColor = color;
+    el.style.color = card.isJoker ? 'var(--color-alert-amber)' : '#ffffff';
+    el.style.textShadow = '0 1px 3px rgba(0,0,0,0.8)';
+    el.style.setProperty('--card-color', color);
+
+    if (!card.faceUp) {
+      el.classList.add('simple-card-value--face-down');
+    }
+    
+    const getNumericRank = (rank: string) => {
+      if (rank === 'A') return '1';
+      if (rank === 'J') return '11';
+      if (rank === 'Q') return '12';
+      if (rank === 'K') return '13';
+      return rank;
+    };
+    
+    el.textContent = card.faceUp ? (card.isJoker ? 'JK' : getNumericRank(String(card.rank))) : '?';
+    
     return el;
   }
 
   /**
    * Renders the cards for a hand into a container.
    */
-  private renderHand(container: HTMLElement, cards: Card[]): void {
+  private renderHand(container: HTMLElement, cards: Card[], color: string): void {
     container.innerHTML = '';
     for (const card of cards) {
-      container.appendChild(this.createCardElement(card));
+      container.appendChild(this.createCardElement(card, color));
     }
   }
 
@@ -118,7 +127,7 @@ export class CardTableOverlay implements TestUI {
     const dealerHandEl = document.getElementById('dealer-hand');
     const dealerTotalEl = document.getElementById('dealer-total');
     if (dealerHandEl) {
-      this.renderHand(dealerHandEl, dealerHand);
+      this.renderHand(dealerHandEl, dealerHand, '#e74c3c'); // Dealer is always red
     }
     if (dealerTotalEl) {
       const evalRes = evaluateHand(dealerHand);
@@ -164,7 +173,9 @@ export class CardTableOverlay implements TestUI {
         playersContainer.appendChild(slot);
         const handEl = slot.querySelector(`.card-hand-${pId}`) as HTMLElement;
         if (handEl) {
-          this.renderHand(handEl, hand);
+          const isPlayerOne = (pId === state.characters[0].id);
+          const color = this.getPlayerColor(pId, isPlayerOne);
+          this.renderHand(handEl, hand, color);
         }
       }
     }
@@ -278,7 +289,7 @@ export class CardTableOverlay implements TestUI {
       });
 
       bindTrait?.addEventListener('click', async () => {
-        const trait = await promptTraitSelection(character);
+        const trait = await promptTraitSelection(character, { bustMitigation: context.bustMitigation });
         if (trait) {
           cleanUp();
           resolve({ type: 'TRAIT', traitName: trait.name });

@@ -2,7 +2,7 @@ import { Card, Suit } from '@cardEngine/cardDefinitions';
 import { Deck } from '@cardEngine/deckManager';
 import { Character } from '@characterSystem/characterTypes';
 import { TestResult, TestUI, ObstacleDefinition } from './encounterTypes';
-import { OBSTACLE_REGISTRY } from './obstacleRegistry';
+import { getHydratedObstacle } from './obstacleRegistry';
 import { runSurvivalTest } from './survivalTestRunner';
 import { runSimpleTest } from './simpleTestRunner';
 import { runGroupTest } from './groupTestRunner';
@@ -122,7 +122,8 @@ export async function dispatchObstacle(
   ui: TestUI
 ): Promise<ObstacleDispatchResult> {
   const cardCode = getCardCode(card);
-  const obstacle = OBSTACLE_REGISTRY[cardCode];
+  const state = gameStateStore.getState();
+  const obstacle = getHydratedObstacle(cardCode, state.scenario);
 
   // Default fallback if card not found or is Safety
   const safetyResult: TestResult = {
@@ -244,7 +245,8 @@ export async function dispatchObstacle(
       if (obstacle.id === 'crewmate_rescue_group') {
         // Crewmate rescue special rule: draw a second obstacle card
         const secondCard = roDeck.draw();
-        const secondObstacle = OBSTACLE_REGISTRY[getCardCode(secondCard)];
+        const secondCardCode = getCardCode(secondCard);
+        const secondObstacle = getHydratedObstacle(secondCardCode, gameStateStore.getState().scenario);
         
         if (secondObstacle && secondObstacle.type === 'GROUP') {
           result = await runGroupTest(activePlayers, deadPCs, survivalDeck, ui, true, initialTension);

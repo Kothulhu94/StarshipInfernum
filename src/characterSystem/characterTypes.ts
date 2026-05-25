@@ -24,6 +24,18 @@ export type AptitudeType =
 
 export type Gear = 'spacesuit' | 'medkit' | 'ranged_weapon' | 'melee_weapon' | 'explosives' | null;
 
+export interface AIPersonality {
+  crisisPropensity: number; // 0.0 to 1.0 (likelihood to attempt a crisis if available)
+  explorationDrive: number; // 0.0 to 1.0 (likelihood to explore a door over wandering)
+  riskTolerance: 'cautious' | 'balanced' | 'reckless'; // Affects Blackjack decisions
+  gearPreferences: {
+    medkit: 'selfish' | 'altruistic' | 'tactical';
+    weapon: 'aggressive' | 'defensive';
+    explosive: 'reckless' | 'cautious';
+    spacesuit: 'selfish' | 'altruistic';
+  };
+}
+
 export interface Character {
   id: string;
   name: string;
@@ -33,5 +45,6 @@ export interface Character {
   gear: Gear;
   isDead: boolean;
   isAI: boolean;
+  aiProfile?: AIPersonality;
   ghostCard?: { suit: string; rank: string }; // Held card for Dead PC ghost swap
 }

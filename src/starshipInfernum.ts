@@ -20,6 +20,7 @@ import { cardTableOverlay } from './userInterface/cardTableOverlay';
 import { turnSequencer } from '@gameFlow/turnSequencer';
 import { gameEventBus } from '@gameFlow/gameEventBus';
 import { gameStateStore } from '@gameFlow/gameStateStore';
+import { initNPCTurnController } from '@gameFlow/npcTurnController';
 import { ShipMapScene } from './mapRenderer/shipMapScene';
 import '@userInterface/tooltipManager';
 import { showObstacleDescriptionModal } from './userInterface/obstacleDescriptionModal';
@@ -437,6 +438,7 @@ function boot(): void {
   initSettingsModal();
   initGameOverScreen();
   initAdjustableGamePanels();
+  initNPCTurnController();
 
   // Wires state updates to ShipMapScene
   gameEventBus.on('state_updated', (state) => {

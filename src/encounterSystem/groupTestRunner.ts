@@ -128,7 +128,7 @@ export async function runGroupTest(
       // Mitigate player bust if possible
       if (pEval.isBust && playerState.appliedTraitModifier === 0) {
         if (hasUsableTrait(p, pHand)) {
-          const action = await ui.promptPlayerAction(p, pHand, true);
+          const action = await ui.promptPlayerAction(p, pHand, true, { bustMitigation: true });
           if (typeof action === 'object' && action.type === 'TRAIT') {
             const trait = findUsableTrait(p, action.traitName, pHand);
             if (trait) {

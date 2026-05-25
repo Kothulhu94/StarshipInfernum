@@ -1,5 +1,5 @@
 import { getAdversaryDefeatText, getAdversaryIntro } from './adversaryFlavorText';
-import { getRandomDealerQuip } from './dealerQuipLibrary';
+import { getContextualTensionQuip, getRandomDealerQuip } from './dealerQuipLibrary';
 import { getObstacleDescription, getOutcomeDescription, getRoomDescription } from './flavorTextLibrary';
 import { NarrativeEvent } from './narrativeTypes';
 
@@ -11,7 +11,7 @@ export function getNarrativeFallbackText(event: NarrativeEvent): string {
   const ctx = event.context;
   switch (event.type) {
     case 'ROOM_ENTERED':
-      return getRoomDescription(ctx.roomName || 'Unknown Room');
+      return getRoomDescription(ctx.roomName || 'Unknown Room', ctx.scenarioId || 'unknown_scenario');
     case 'OBSTACLE_REVEALED':
       return getObstacleDescription(ctx.obstacleName || 'Unknown Obstacle');
     case 'TEST_BUST':
@@ -27,7 +27,7 @@ export function getNarrativeFallbackText(event: NarrativeEvent): string {
     case 'ADVERSARY_DEFEATED':
       return getAdversaryDefeatText(ctx.adversaryName || 'Unknown Adversary');
     case 'RISING_TENSION':
-      return getRandomDealerQuip('TENSION_RISING');
+      return getContextualTensionQuip(ctx);
     case 'CHARACTER_DEATH':
       return `${ctx.characterName} has perished in the cold void.`;
     case 'GHOST_FLASHBACK':

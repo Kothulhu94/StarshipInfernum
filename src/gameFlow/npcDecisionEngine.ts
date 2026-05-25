@@ -86,25 +86,37 @@ export function getNPCDecision(
     return 'STAND';
   }
 
-  // 4. Stand on 17+
-  if (playerEval.total >= 17) {
+  // 4. Determine Risk Tolerance
+  const risk = character.aiProfile?.riskTolerance ?? 'balanced';
+  let standThreshold = 17;
+  let alwaysHitThreshold = 11;
+
+  if (risk === 'cautious') {
+    standThreshold = 16;
+    alwaysHitThreshold = 11;
+  } else if (risk === 'reckless') {
+    standThreshold = 18;
+    alwaysHitThreshold = 15;
+  }
+
+  // Stand threshold
+  if (playerEval.total >= standThreshold) {
     return 'STAND';
   }
 
-  // 5. Always hit on 11 or below
-  if (playerEval.total <= 11) {
+  // Always hit threshold
+  if (playerEval.total <= alwaysHitThreshold) {
     return 'HIT';
   }
 
-  // 6. Total is 12-16
-  // Try to use a trait to reach 18-21
+  // Intermediate zone: Try to use a trait to reach standThreshold - 21
   if (canUseTrait) {
     const availableTraits = character.traits.filter((t) => !t.exhausted && !t.busted);
     const sortedTraits = [...availableTraits].sort((a, b) => a.modifier - b.modifier);
 
     for (const trait of sortedTraits) {
       const potentialTotal = playerEval.total + trait.modifier;
-      if (potentialTotal >= 18 && potentialTotal <= 21) {
+      if (potentialTotal >= standThreshold && potentialTotal <= 21) {
         return { type: 'TRAIT', traitName: trait.name };
       }
     }
@@ -113,12 +125,12 @@ export function getNPCDecision(
   // Check Dealer's face-up card if visible
   if (dealerFaceUpCard) {
     const dVal = cardValue(dealerFaceUpCard);
-    // Hit if dealer card is 7 or higher (strong dealer hand)
-    if (dVal >= 7) {
+    // Hit if dealer card is strong, or if reckless
+    if (dVal >= 7 || risk === 'reckless') {
       return 'HIT';
     }
   }
 
-  // Default to Stand on 12-16 if dealer card is weak (< 7) or unknown
+  // Default to Stand
   return 'STAND';
 }

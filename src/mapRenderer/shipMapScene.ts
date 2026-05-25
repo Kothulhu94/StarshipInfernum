@@ -10,7 +10,6 @@ import { RoomNodeGraph } from '../mapGenerator/roomNodeGraph';
 import { RoomNode, DoorDirection } from '../mapGenerator/mapLayoutTypes';
 import { Character } from '../characterSystem/characterTypes';
 import { MapCameraController } from './mapCameraController';
-import { FogOfWarController } from './fogOfWarController';
 import { CharacterTokenRenderer } from './characterTokenRenderer';
 import { MapInteractionHandler } from './mapInteractionHandler';
 import { paintRoom } from './roomTilePainter';
@@ -22,7 +21,6 @@ export class ShipMapScene extends Phaser.Scene {
   private deckContainer!: Phaser.GameObjects.Container;
 
   private cameraController!: MapCameraController;
-  private fogController!: FogOfWarController;
   private tokenRenderer!: CharacterTokenRenderer;
   private interactionHandler!: MapInteractionHandler;
 
@@ -66,7 +64,6 @@ export class ShipMapScene extends Phaser.Scene {
 
     // Initialize sub-controllers
     this.cameraController = new MapCameraController(this);
-    this.fogController = new FogOfWarController();
     this.tokenRenderer = new CharacterTokenRenderer();
     this.interactionHandler = new MapInteractionHandler();
 
@@ -147,7 +144,6 @@ export class ShipMapScene extends Phaser.Scene {
 
     if (deckChanged || graphChanged) {
       // Clear current deck graphic tokens
-      this.fogController.clear();
       this.tokenRenderer.clear();
       this.interactionHandler.clear();
     }
@@ -169,7 +165,7 @@ export class ShipMapScene extends Phaser.Scene {
   }
 
   /**
-   * Redraws all corridor paths, rooms, fog, tokens, and interactions.
+   * Redraws all corridor paths, rooms, tokens, and interactions.
    */
   private renderMap(): void {
     if (!this.graph) return;
@@ -177,7 +173,6 @@ export class ShipMapScene extends Phaser.Scene {
     this.graphics.clear();
 
     const roomsOnDeck = this.graph.getRoomsOnDeck(this.currentDeck);
-    console.log("RENDER MAP roomsOnDeck:", roomsOnDeck.map(r => ({ id: r.id, name: r.name, x: r.x, y: r.y, z: r.z })));
     const corridorsOnDeck = Array.from(this.graph.corridors.values()).filter(
       (c) => c.tiles[0]?.z === this.currentDeck
     );
@@ -189,18 +184,13 @@ export class ShipMapScene extends Phaser.Scene {
 
     // 2. Paint room interiors
     for (const room of roomsOnDeck) {
-      if (room.isDiscovered) {
-        paintRoom(this.graphics, room, this.activeRoomId);
-      }
+      paintRoom(this.graphics, room, this.activeRoomId);
     }
 
     // 3. Paint active hazards and item markers
     paintRoomIconOverlays(this.graphics, roomsOnDeck, this.activeObstacleRoomIds);
 
-    // 4. Update Fog of War Masks
-    this.fogController.updateFog(this, roomsOnDeck, this.deckContainer);
-
-    // 5. Update Interactive Zones
+    // 4. Update Interactive Zones
     this.interactionHandler.setupInteractions(
       this,
       roomsOnDeck,
@@ -211,7 +201,7 @@ export class ShipMapScene extends Phaser.Scene {
       (room) => this.handleRoomHover(room)
     );
 
-    // 6. Update Character Tokens
+    // 5. Update Character Tokens
     const roomsMap = this.graph.rooms;
     this.tokenRenderer.updateTokens(
       this,

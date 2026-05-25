@@ -29,9 +29,12 @@ export async function runSurvivalTest(
   deadPCs: Character[],
   deck: Deck,
   ui: TestUI,
-  initialTension: number = 0
+  initialTension: number = 0,
+  obstacleName?: string
 ): Promise<TestResult> {
   let tension = initialTension;
+  const state = gameStateStore.getState();
+  const scenarioId = state.scenario?.id;
   const traitsExhausted: string[] = [];
 
   while (true) {
@@ -69,6 +72,8 @@ export async function runSurvivalTest(
           type: 'RISING_TENSION',
           context: {
             characterName: player.name,
+            obstacleName,
+            scenarioId
           }
         });
         await ui.showTestResult({
@@ -120,7 +125,7 @@ export async function runSurvivalTest(
     // If player busted, they can mitigate it using a trait if they haven't used one yet
     if (playerEval.isBust && playerState.appliedTraitModifier === 0) {
       if (hasUsableTrait(player, playerHand)) {
-        const action = await ui.promptPlayerAction(player, playerHand, true);
+        const action = await ui.promptPlayerAction(player, playerHand, true, { bustMitigation: true });
         if (typeof action === 'object' && action.type === 'TRAIT') {
           const trait = findUsableTrait(player, action.traitName, playerHand);
           if (trait) {
@@ -231,6 +236,8 @@ export async function runSurvivalTest(
         type: 'RISING_TENSION',
         context: {
           characterName: player.name,
+          obstacleName,
+          scenarioId
         }
       });
       // Show intermediate result

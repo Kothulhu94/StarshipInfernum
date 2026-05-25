@@ -9,7 +9,8 @@ import { destroyWeapon, hasGear } from '@characterSystem/gearInventory';
 import { canUseTraitModifier } from '@characterSystem/playerActionModel';
 import { gameStateStore } from '@gameFlow/gameStateStore';
 import { gameEventBus } from '@gameFlow/gameEventBus';
-import { AdversaryDisposition, getRequiredAdversarySuccesses } from './adversaryStateTypes';
+import { getRequiredAdversarySuccesses, AdversaryDisposition } from './adversaryStateTypes';
+import { getAdversaryAdvantageText, getAdversaryHitText, getAdversaryStalemateText } from '@narrativeSystem/combatFlavorText';
 
 /**
  * Handles the combat loop against a mobile Adversary.
@@ -95,11 +96,14 @@ export async function runAdversaryCombat(
     const rawDealerEval = evaluateHand([{ ...d1, faceUp: true }, dealerHand[1]]);
 
     if (rawDealerEval.isNatural21 && !rawPlayerEval.isNatural21) {
-      gameStateStore.logMessage(`${adversary.name} gets a Natural 21 and gains the upper hand!`);
+      const advText = getAdversaryAdvantageText(adversary.name);
+      gameStateStore.logMessage(`${adversary.name} gets a Natural 21! ${advText}`);
       gameEventBus.emit('narrative_triggered', {
         type: 'RISING_TENSION',
         context: {
           characterName: player.name,
+          adversaryName: adversary.name,
+          scenarioId: gameStateStore.getState().scenario?.id
         }
       });
       await ui.showTestResult({
@@ -119,7 +123,8 @@ export async function runAdversaryCombat(
       if (exhausted) {
         exhausted.exhausted = false;
       }
-      gameStateStore.logMessage(`${player.name} gets a Natural 21 and strikes ${adversary.name}!`);
+      const hitText = getAdversaryHitText(adversary.name);
+      gameStateStore.logMessage(`${player.name} gets a Natural 21! ${hitText}`);
       if (hp > 0) {
         await ui.showTestResult({
           outcome: 'WIN',
@@ -385,7 +390,8 @@ export async function runAdversaryCombat(
       // Success: decrease Adversary HP
       hp--;
       tension = 0;
-      gameStateStore.logMessage(`${player.name} wins the exchange against ${adversary.name}! (${playerEval.total} vs ${dealerEval.total})`);
+      const hitText = getAdversaryHitText(adversary.name);
+      gameStateStore.logMessage(`${hitText} (${playerEval.total} vs ${dealerEval.total})`);
       if (hp > 0) {
         await ui.showTestResult({
           outcome: 'WIN',
@@ -397,11 +403,14 @@ export async function runAdversaryCombat(
     } else if (dealerWins) {
       // Failure: increase tension for the next hand
       tension++;
-      gameStateStore.logMessage(`${adversary.name} gains the upper hand! (${dealerEval.total} vs ${playerEval.total})`);
+      const advText = getAdversaryAdvantageText(adversary.name);
+      gameStateStore.logMessage(`${advText} (${dealerEval.total} vs ${playerEval.total})`);
       gameEventBus.emit('narrative_triggered', {
         type: 'RISING_TENSION',
         context: {
           characterName: player.name,
+          adversaryName: adversary.name,
+          scenarioId: gameStateStore.getState().scenario?.id
         }
       });
       await ui.showTestResult({
@@ -412,7 +421,8 @@ export async function runAdversaryCombat(
       }, true);
     } else if (isPush) {
       // Push: re-deal hand without increasing tension
-      gameStateStore.logMessage(`Push! Both lock horns in a stalemate. (${playerEval.total} vs ${dealerEval.total})`);
+      const pushText = getAdversaryStalemateText(adversary.name);
+      gameStateStore.logMessage(`Push! ${pushText} (${playerEval.total} vs ${dealerEval.total})`);
       await ui.showTestResult({
         outcome: 'PUSH',
         finalPlayerTotal: playerEval.total,

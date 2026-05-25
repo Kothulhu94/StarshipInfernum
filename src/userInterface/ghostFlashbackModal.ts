@@ -29,38 +29,28 @@ export function showGhostFlashbackModal(
     cardsContainer.innerHTML = '';
     for (const card of availableCards) {
       const cardEl = document.createElement('div');
-      let suitSymbol = '♠';
-      if (card.suit === Suit.HEARTS) suitSymbol = '♥';
-      if (card.suit === Suit.DIAMONDS) suitSymbol = '♦';
-      if (card.suit === Suit.CLUBS) suitSymbol = '♣';
 
-      const isRed = card.suit === Suit.HEARTS || card.suit === Suit.DIAMONDS;
-
-      cardEl.className = 'playing-card playing-card--face-up';
-      cardEl.style.cursor = 'pointer';
-      cardEl.innerHTML = `
-        <div class="playing-card__inner">
-          <div class="playing-card__front" style="transform: rotateY(180deg); color: ${isRed ? 'var(--color-damage-red)' : 'var(--color-text-primary)'};">
-            <div class="playing-card__corner">
-              <span class="playing-card__rank">${card.rank}</span>
-              <span class="playing-card__suit">${suitSymbol}</span>
-            </div>
-            <div class="playing-card__center-suit">${suitSymbol}</div>
-            <div class="playing-card__corner" style="transform: rotate(180deg);">
-              <span class="playing-card__rank">${card.rank}</span>
-              <span class="playing-card__suit">${suitSymbol}</span>
-            </div>
-          </div>
-        </div>
-      `;
+      cardEl.className = 'simple-card-value';
+      cardEl.style.backgroundColor = 'var(--color-ghost-violet-dim)';
+      cardEl.style.color = card.isJoker ? 'var(--color-alert-amber)' : '#ffffff';
+      cardEl.style.textShadow = '0 1px 3px rgba(0,0,0,0.8)';
+      cardEl.style.setProperty('--card-color', 'var(--color-ghost-violet)');
+      
+      const getNumericRank = (rank: string) => {
+        if (rank === 'A') return '1';
+        if (rank === 'J') return '11';
+        if (rank === 'Q') return '12';
+        if (rank === 'K') return '13';
+        return rank;
+      };
+      
+      cardEl.textContent = card.isJoker ? 'JK' : getNumericRank(String(card.rank));
 
       cardEl.addEventListener('click', () => {
-        cardsContainer.querySelectorAll('.playing-card').forEach((c) => {
-          c.classList.remove('playing-card--selected');
-          (c as HTMLElement).style.boxShadow = '';
+        cardsContainer.querySelectorAll('.simple-card-value').forEach((c) => {
+          c.classList.remove('simple-card-value--selected');
         });
-        cardEl.classList.add('playing-card--selected');
-        cardEl.style.boxShadow = '0 0 15px var(--color-ghost-violet)';
+        cardEl.classList.add('simple-card-value--selected');
         selectedCard = card;
         if (submitBtn) {
           submitBtn.disabled = !narrationInput?.value.trim();

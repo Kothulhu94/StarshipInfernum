@@ -112,8 +112,9 @@ export function initCharacterCreationPanel(): void {
 }
 
 function randomizeSlotConfig(slot: CrewSlotConfig) {
-  const firstNames = ['John', 'Sarah', 'Kaelen', 'Elena', 'Marcus', 'Li', 'Alistair', 'Nadia', 'Darius', 'Vesper', 'Aria', 'Kael', 'Lyra', 'Cassian', 'Nova', 'Zane', 'Talia', 'Jaxon', 'Kira', 'Valen'];
-  const lastNames = ['Shepard', 'Riddick', 'Ripley', 'O\'Connor', 'Chen', 'Vance', 'Mercer', 'Cooper', 'Thorne', 'Aurelia', 'Stellar', 'Vortex', 'Quasar', 'Nebula', 'Nova', 'Void', 'Vega', 'Polaris', 'Orion', 'Sol'];
+  const firstSyllables = ["Ves", "Dak", "Kor", "Nim", "Zal", "Tev", "Brek", "Ral", "Cen", "Mor", "Jax", "Quin", "Yor", "Zan"];
+  const secondSyllables = ["rin", "tar", "las", "na", "to", "vek", "lis", "dor", "ka", "th", "on", "us"];
+  const lastNames = ["Obal", "Kesh", "Tarn", "Riker", "Drax", "Surn", "Voss", "Bane", "Cort", "Rey", "Jin"];
   const concepts = ['Rookie Pilot', 'Cynical Officer', 'Resourceful Scavenger', 'Hotshot Gunner', 'Absent-minded Tech', 'Stoic Guard', 'Paranoid Medic', 'Veteran Explorer', 'Systems Specialist', 'Quartermaster', 'Deckhand', 'Security Officer'];
   
   const aptitudes: AptitudeType[] = [
@@ -128,8 +129,12 @@ function randomizeSlotConfig(slot: CrewSlotConfig) {
   const traitPool2 = ['Determined', 'Observant', 'Inspiring Presence', 'Cool Under Pressure', 'Eager to Please', 'Seen it All Before', 'Thick Skinned', 'Deep Insight', 'Calculated Pessimism', 'Triage Prioritization'];
   const traitPool3 = ['Quick Reflexes', 'Agile', 'Refuse to Fail', 'Emotionless Logic', 'Clumsy but Quick', 'Stubborn as a Mule', 'Brawler', 'Calming Voice', 'Sacrificial Protocols', 'Clinical Detachment'];
 
+  const f1 = firstSyllables[Math.floor(Math.random() * firstSyllables.length)];
+  const f2 = secondSyllables[Math.floor(Math.random() * secondSyllables.length)];
+  const l = lastNames[Math.floor(Math.random() * lastNames.length)];
+
   slot.pregenName = 'custom';
-  slot.customName = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+  slot.customName = `${f1}${f2} ${l}`;
   slot.customConcept = concepts[Math.floor(Math.random() * concepts.length)];
   slot.customAptitude = aptitudes[Math.floor(Math.random() * aptitudes.length)];
   slot.customGear = gearOptions[Math.floor(Math.random() * gearOptions.length)];
@@ -179,6 +184,7 @@ The current setting/scenario is: ${scenarioInfo}
 The existing crew members are: ${existingCrewStr}
 
 Generate a new, unique crew member that fits the scenario and complements the existing crew. Do not duplicate the concepts or names of existing crew members.
+Do not use cliché AI-generated names (like Vance, Nova, Orion, Elara, Lyra). Invent unique, gritty sci-fi names.
 Select a unique Aptitude from: Android, Armored, Commander, Counselor, Engineer, Medic, Militant, Psychic, Sanitation, Security, Shapeshifter, Science, Smuggler, Survivor, Trainee.
 Select Starting Gear from: spacesuit, medkit, ranged_weapon, melee_weapon, explosives, or null.
 Create 3 Traits: Trait 1 (modifier 3), Trait 2 (modifier 2), Trait 3 (modifier 1). Assign a positive or negative sign to each modifier based on the trait's nature.

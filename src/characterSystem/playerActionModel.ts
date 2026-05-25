@@ -21,6 +21,8 @@ export interface PlayerActionPromptContext {
   hasUsedShapeshifterSwap?: boolean;
   hasUsedSmugglerSwap?: boolean;
   canUseWeaponRedraw?: boolean;
+  /** When true, the trait-selection dialog should only show negative-modifier traits. */
+  bustMitigation?: boolean;
 }
 
 export interface PlayerActionAvailability {

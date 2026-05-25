@@ -224,6 +224,8 @@
   }
 }
 
+
+
 @keyframes gearSpin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -236,4 +238,55 @@
   to {
     box-shadow: 0 0 15px var(--color-ghost-violet), 0 0 25px var(--color-ghost-violet-dim);
   }
+}
+
+/* Simple Card Value Element */
+.simple-card-value {
+  width: var(--card-width);
+  height: var(--card-width); /* Make it a square */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-panel-surface);
+  border-radius: var(--radius-sm);
+  position: relative;
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: var(--font-weight-bold);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  animation: cardDeal 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  background-clip: padding-box;
+  margin: 0 0.25rem;
+  z-index: 1;
+}
+
+/* Holographic Border */
+.simple-card-value::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: calc(var(--radius-sm) + 2px);
+  background: linear-gradient(135deg, var(--card-color, #ff007f), rgba(255,255,255,0.8), var(--card-color, #3a00ff), rgba(255,255,255,0.8), var(--card-color, #ff007f));
+  background-size: 300% 300%;
+  z-index: -1;
+  animation: holographicGradient 3s ease infinite;
+}
+
+.simple-card-value--face-down {
+  color: var(--color-text-muted) !important;
+}
+
+.simple-card-value--selected {
+  box-shadow: 0 0 15px var(--color-ghost-violet);
+}
+
+.simple-card-value--selected::before {
+  background: linear-gradient(135deg, var(--color-ghost-violet), #ff00ff, var(--color-ghost-violet));
+  background-size: 300% 300%;
+}
+
+@keyframes holographicGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }

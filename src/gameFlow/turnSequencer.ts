@@ -25,8 +25,11 @@ import { TestUI, TestResult } from '@encounterSystem/encounterTypes';
 import { Character } from '@characterSystem/characterTypes';
 import { endGame } from './gameOverHandler';
 import { getDecksFromState, saveDecksToState, instrumentDecks } from './deckStateSynchronizer';
-import { OBSTACLE_REGISTRY } from '@encounterSystem/obstacleRegistry';
+import { getHydratedObstacle } from '@encounterSystem/obstacleRegistry';
 import { shouldRoomObstacleClear } from '@encounterSystem/obstacleSpecialRuleEffects';
+import { showRoomDescriptionModal } from '@userInterface/roomDescriptionModal';
+import { getRoomDescription } from '@narrativeSystem/flavorTextLibrary';
+import { getCrisisAdvanceText, getCrisisResolvedText } from '@narrativeSystem/crisisFlavorText';
 
 function cardCodeToCard(cardCode: string): Card {
   const rank = cardCode.substring(0, cardCode.length - 1) as any;
@@ -88,7 +91,7 @@ export class TurnSequencer {
   /**
    * Move active character to an already connected room.
    */
-  public moveActiveCharacter(toRoomId: string): void {
+  public async moveActiveCharacter(toRoomId: string): Promise<void> {
     const state = gameStateStore.getState();
     const graph = gameStateStore.getMapGraph();
     const activeChar = this.getActiveCharacter();
@@ -113,6 +116,9 @@ export class TurnSequencer {
     
     // Autosave immediately upon room entry
     saveLoadManager.saveGame('autosave');
+
+    const roomFlavor = getRoomDescription(targetRoom.name, state.scenario?.id || '');
+    await showRoomDescriptionModal(targetRoom.name, roomFlavor);
 
     // Check if the target room has an unresolved obstacle
     if (hasBlockingObstacle(targetRoom)) {
@@ -179,7 +185,8 @@ export class TurnSequencer {
     }
     this.lastDrawnROCardCode = roomCardCode;
 
-    const obstacleName = OBSTACLE_REGISTRY[obstacleCardCode]?.name || newRoom.name;
+    const obstacle = getHydratedObstacle(obstacleCardCode, state.scenario);
+    const obstacleName = obstacle?.name || newRoom.name;
 
     // Trigger narrative router
     gameEventBus.emit('narrative_triggered', {
@@ -195,6 +202,9 @@ export class TurnSequencer {
 
     // Save game immediately before resolving obstacle
     saveLoadManager.saveGame('autosave');
+
+    const roomFlavor = getRoomDescription(newRoom.name, state.scenario?.id || '');
+    await showRoomDescriptionModal(newRoom.name, roomFlavor);
 
     // Transition to obstacle phase
     phaseStateMachine.transitionTo('OBSTACLE');
@@ -274,7 +284,8 @@ export class TurnSequencer {
     const deadPCs = state.characters.filter((c) => c.isDead);
 
     const roomCardCode = getRoomCardCode(currentRoom) || obstacleCardCode;
-    const obstacleName = OBSTACLE_REGISTRY[obstacleCardCode]?.name || currentRoom.name;
+    const obstacle = getHydratedObstacle(obstacleCardCode, state.scenario);
+    const obstacleName = obstacle?.name || currentRoom.name;
     gameStateStore.logMessage(`Encountering obstacle: ${obstacleName} (${obstacleCardCode}) in ${currentRoom.name} (${roomCardCode})`);
     phaseStateMachine.transitionTo('TEST');
 
@@ -310,7 +321,7 @@ export class TurnSequencer {
     };
     await ui.showTestResult(getDisplayResult(testResult));
 
-    const obstacleDefinition = OBSTACLE_REGISTRY[obstacleCardCode];
+    const obstacleDefinition = getHydratedObstacle(obstacleCardCode, state.scenario);
     const isCleared = obstacleDefinition
       ? shouldRoomObstacleClear(obstacleDefinition, testResult)
       : true;
@@ -399,24 +410,23 @@ export class TurnSequencer {
     if (result.outcome === 'SUCCESS') {
       gameStateStore.updateState((s) => {
         const currentTarget = target.type === 'MAJOR' ? s.majorCrisisState : s.minorCrisisState;
-        const crisisCard = target.type === 'MAJOR' ? s.majorCrisisCard : s.minorCrisisCard;
         if (!currentTarget) return;
+        onCrisisTestSuccess(currentTarget);
+        recordSuccessfulCrisisStep(currentTarget, currentRoom.id);
 
-        if (target.isFinalCardTest && crisisCard) {
+        if (currentTarget.jokersRemaining <= 0) {
           recordFinalCrisisResolution(currentTarget, currentRoom.id);
-          resolveCrisisCard(currentTarget, crisisCard, survivalDeck);
-          gameStateStore.logMessage(`${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis resolved completely!`);
+          const resolvedText = getCrisisResolvedText(target.type === 'MAJOR' ? s.majorCrisisState?.crisis.id || '' : s.minorCrisisState?.crisis.id || '', target.type === 'MAJOR');
+          gameStateStore.logMessage(`${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis resolved completely! ${resolvedText}`);
           if (target.type === 'MAJOR') {
             endGame(true, 'The Major Crisis has been resolved. You survived!');
           }
-          return;
+        } else {
+          const advanceText = getCrisisAdvanceText(target.type === 'MAJOR' ? s.majorCrisisState?.crisis.id || '' : s.minorCrisisState?.crisis.id || '', target.type === 'MAJOR');
+          gameStateStore.logMessage(
+            `Success! Removed 1 step from ${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis. ${advanceText} Remaining: ${currentTarget.jokersRemaining}`
+          );
         }
-
-        onCrisisTestSuccess(currentTarget);
-        recordSuccessfulCrisisStep(currentTarget, currentRoom.id);
-        gameStateStore.logMessage(
-          `Success! Removed 1 Joker from ${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis. Remaining: ${currentTarget.jokersRemaining}`
-        );
       });
       saveDecksToState(survivalDeck, roDeck);
     } else if (result.outcome === 'BUST') {
@@ -424,7 +434,7 @@ export class TurnSequencer {
         const currentTarget = target.type === 'MAJOR' ? s.majorCrisisState : s.minorCrisisState;
         if (currentTarget && currentTarget.jokersRemaining > 0) {
           onCrisisTestBust(currentTarget, survivalDeck);
-          gameStateStore.logMessage(`Bust! ${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis Joker shuffled back into the Survival Deck.`);
+          gameStateStore.logMessage(`Bust! A Disaster Trigger has been added to the Survival Deck for the ${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis.`);
         }
       });
       this.crisisTestCountPerRoom.set(currentRoom.id, 3);

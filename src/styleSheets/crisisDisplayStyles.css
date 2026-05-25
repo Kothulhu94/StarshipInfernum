@@ -41,6 +41,12 @@
 /* Crisis Cards detailed styles */
 .crisis-card {
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  cursor: pointer;
+}
+
+.crisis-card:hover:not(.crisis-card--resolved) {
+  border-color: var(--color-console-cyan-dim);
+  box-shadow: 0 0 10px var(--color-console-cyan-dim);
 }
 
 .crisis-card--major:not(.crisis-card--resolved) {
@@ -74,10 +80,7 @@
   gap: 2px;
 }
 
-.crisis-card__jokers::before {
-  content: '🃏';
-  font-size: var(--font-size-xs);
-}
+
 
 /* Low Tokens / Reshuffle Warning Klaxon Pulse */
 @keyframes alarmPulse {

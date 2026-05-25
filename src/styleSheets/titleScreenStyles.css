@@ -84,10 +84,6 @@
   color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed);
   flex: 1;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .scenario-card__meta {
