@@ -6,6 +6,7 @@ import { gameEventBus } from './gameEventBus';
 import { normalizeRoomObstacleState } from '@mapGenerator/roomObstacleState';
 
 const SAVE_KEY_PREFIX = 'starship-infernum-';
+const AUTOSAVE_SLOT = 'autosave';
 
 export class SaveLoadManager {
   /**
@@ -15,11 +16,33 @@ export class SaveLoadManager {
     return `${SAVE_KEY_PREFIX}${slot}`;
   }
 
+  private getScenarioAutosaveSlot(scenarioId: string): string {
+    return `${AUTOSAVE_SLOT}-${scenarioId}`;
+  }
+
+  private getActiveAutosaveSlot(): string | null {
+    const scenarioId = gameStateStore.getState().scenario?.id;
+    return scenarioId ? this.getScenarioAutosaveSlot(scenarioId) : null;
+  }
+
   /**
    * Checks if a save file exists in the specified slot.
    */
   public hasSave(slot: string): boolean {
-    return localStorage.getItem(this.getSlotKey(slot)) !== null;
+    const resolvedSlot = slot === AUTOSAVE_SLOT ? this.getActiveAutosaveSlot() : slot;
+    return resolvedSlot ? localStorage.getItem(this.getSlotKey(resolvedSlot)) !== null : false;
+  }
+
+  public hasScenarioAutosave(scenarioId: string): boolean {
+    const raw = localStorage.getItem(this.getSlotKey(this.getScenarioAutosaveSlot(scenarioId)));
+    if (!raw) return false;
+
+    try {
+      const parsed: SerializableGameState = JSON.parse(raw);
+      return parsed.scenarioId === scenarioId && parsed.gamePhase !== 'GAME_OVER';
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -62,7 +85,8 @@ export class SaveLoadManager {
       },
     };
 
-    localStorage.setItem(this.getSlotKey(slot), JSON.stringify(serialized));
+    const resolvedSlot = slot === AUTOSAVE_SLOT ? this.getScenarioAutosaveSlot(state.scenario.id) : slot;
+    localStorage.setItem(this.getSlotKey(resolvedSlot), JSON.stringify(serialized));
     gameStateStore.logMessage(`Game autosaved/saved to slot "${slot}".`);
   }
 
@@ -71,7 +95,13 @@ export class SaveLoadManager {
    * Returns true if successful, false otherwise.
    */
   public loadGame(slot: string): boolean {
-    const raw = localStorage.getItem(this.getSlotKey(slot));
+    const resolvedSlot = slot === AUTOSAVE_SLOT ? this.getActiveAutosaveSlot() : slot;
+    if (!resolvedSlot) {
+      console.warn(`No active scenario available for slot: ${slot}`);
+      return false;
+    }
+
+    const raw = localStorage.getItem(this.getSlotKey(resolvedSlot));
     if (!raw) {
       console.warn(`No saved game found in slot: ${slot}`);
       return false;
@@ -126,11 +156,30 @@ export class SaveLoadManager {
     }
   }
 
+  public loadScenarioAutosave(scenarioId: string): boolean {
+    if (!this.hasScenarioAutosave(scenarioId)) return false;
+    return this.loadGame(this.getScenarioAutosaveSlot(scenarioId));
+  }
+
   /**
    * Delete the save data in the specified slot.
    */
   public clearSave(slot: string): void {
-    localStorage.removeItem(this.getSlotKey(slot));
+    const resolvedSlot = slot === AUTOSAVE_SLOT ? this.getActiveAutosaveSlot() : slot;
+    if (resolvedSlot) {
+      localStorage.removeItem(this.getSlotKey(resolvedSlot));
+    }
+  }
+
+  public clearScenarioAutosave(scenarioId: string): void {
+    localStorage.removeItem(this.getSlotKey(this.getScenarioAutosaveSlot(scenarioId)));
+  }
+
+  public clearCurrentScenarioAutosave(): void {
+    const autosaveSlot = this.getActiveAutosaveSlot();
+    if (autosaveSlot) {
+      localStorage.removeItem(this.getSlotKey(autosaveSlot));
+    }
   }
 }
 

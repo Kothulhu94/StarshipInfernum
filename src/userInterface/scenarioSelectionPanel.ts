@@ -1,11 +1,36 @@
 import { showScreen } from '../starshipInfernum';
 import { SCENARIO_REGISTRY } from '@scenarioData/scenarioRegistry';
 import { ScenarioConfig } from '@scenarioData/scenarioTypes';
+import { saveLoadManager } from '@gameFlow/saveLoadManager';
+import { gameEventBus } from '@gameFlow/gameEventBus';
 
 let selectedScenario: ScenarioConfig | null = null;
 
 export function getSelectedScenario(): ScenarioConfig | null {
   return selectedScenario;
+}
+
+function setSelectedScenario(scenario: ScenarioConfig): void {
+  document.querySelectorAll('.scenario-card').forEach((card) => {
+    card.classList.remove('scenario-card--selected');
+  });
+  document.getElementById(`scenario-card-${scenario.id}`)?.classList.add('scenario-card--selected');
+  selectedScenario = scenario;
+}
+
+function updateContinueButton(scenario: ScenarioConfig): void {
+  const continueBtn = document.getElementById(`btn-continue-${scenario.id}`) as HTMLButtonElement | null;
+  if (!continueBtn) return;
+
+  const hasSave = saveLoadManager.hasScenarioAutosave(scenario.id);
+  continueBtn.disabled = !hasSave;
+  continueBtn.title = hasSave ? `Continue ${scenario.name}` : 'No saved campaign for this scenario';
+}
+
+export function refreshScenarioContinueButtons(): void {
+  for (const scenario of SCENARIO_REGISTRY) {
+    updateContinueButton(scenario);
+  }
 }
 
 export function initScenarioSelectionPanel(onScenarioSelected: (scenario: ScenarioConfig) => void): void {
@@ -34,20 +59,32 @@ export function initScenarioSelectionPanel(onScenarioSelected: (scenario: Scenar
         <span>Year: ${scenario.year}</span>
         <span>Ship: ${scenario.shipName}</span>
       </div>
+      <div class="scenario-card__actions">
+        <button id="btn-new-${scenario.id}" type="button" class="menu-button menu-button--primary">New Game</button>
+        <button id="btn-continue-${scenario.id}" type="button" class="menu-button">Continue</button>
+      </div>
     `;
 
-    card.addEventListener('click', () => {
-      // Remove selected class from others
-      document.querySelectorAll('.scenario-card').forEach((c) => {
-        c.classList.remove('scenario-card--selected');
-      });
-      card.classList.add('scenario-card--selected');
-
-      selectedScenario = scenario;
+    card.querySelector(`#btn-new-${scenario.id}`)?.addEventListener('click', () => {
+      setSelectedScenario(scenario);
+      saveLoadManager.clearScenarioAutosave(scenario.id);
+      refreshScenarioContinueButtons();
       onScenarioSelected(scenario);
       showScreen('character-creation-screen');
     });
 
+    card.querySelector(`#btn-continue-${scenario.id}`)?.addEventListener('click', () => {
+      setSelectedScenario(scenario);
+      if (saveLoadManager.loadScenarioAutosave(scenario.id)) {
+        showScreen('game-screen');
+      } else {
+        refreshScenarioContinueButtons();
+      }
+    });
+
     listContainer.appendChild(card);
+    updateContinueButton(scenario);
   }
+
+  gameEventBus.on('game_over', () => refreshScenarioContinueButtons());
 }

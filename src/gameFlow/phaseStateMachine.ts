@@ -30,6 +30,11 @@ export class PhaseStateMachine {
 
     if (fromPhase === targetPhase) return;
 
+    if (fromPhase === 'GAME_OVER' && targetPhase !== 'SETUP') {
+      console.warn(`Warning: Ignoring phase transition from ${fromPhase} to ${targetPhase}`);
+      return;
+    }
+
     if (!this.isValidTransition(fromPhase, targetPhase)) {
       console.warn(`Warning: Invalid phase transition from ${fromPhase} to ${targetPhase}`);
       // Log the warning, but we can bypass or enforce it strictly depending on dev needs.

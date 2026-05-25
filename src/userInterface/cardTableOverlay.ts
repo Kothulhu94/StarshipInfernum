@@ -7,8 +7,11 @@ import { executeShapeshifterSwap, executeSmugglerSwap } from '@characterSystem/a
 import { getPlayerActionAvailability, PlayerAction, PlayerActionPromptContext } from '@characterSystem/playerActionModel';
 import { showGhostFlashbackModal } from './ghostFlashbackModal';
 import { gameStateStore } from '@gameFlow/gameStateStore';
+import { gameEventBus } from '@gameFlow/gameEventBus';
 
 import { promptTraitSelection, promptBustedTraitSelection } from './hitStandControls';
+
+const PLAYER_CARD_COLORS = ['#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e84393', '#00cec9', '#fdcb6e'];
 
 // Local cache of dealer hand for decision context
 let currentDealerHand: Card[] = [];
@@ -19,7 +22,54 @@ let hasUsedSmugglerSwap = false;
 
 export class CardTableOverlay implements TestUI {
   private playerColorMap = new Map<string, string>();
-  private availableColors = ['#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e84393', '#00cec9', '#fdcb6e'];
+  private availableColors = [...PLAYER_CARD_COLORS];
+
+  constructor() {
+    gameEventBus.on('game_reset', () => this.reset());
+    gameEventBus.on('game_over', () => this.reset());
+  }
+
+  private replaceInteractiveButton(id: string): void {
+    const button = document.getElementById(id);
+    button?.replaceWith(button.cloneNode(true));
+  }
+
+  public reset(): void {
+    currentDealerHand = [];
+    currentPlayerHands = new Map();
+    currentTension = 0;
+    hasUsedShapeshifterSwap = false;
+    hasUsedSmugglerSwap = false;
+    this.playerColorMap.clear();
+    this.availableColors = [...PLAYER_CARD_COLORS];
+
+    document.getElementById('card-table-overlay')?.setAttribute('hidden', '');
+    document.getElementById('card-table-result')?.setAttribute('hidden', '');
+    document.getElementById('rising-tension-indicator')?.setAttribute('hidden', '');
+
+    const controls = document.getElementById('card-table-controls');
+    if (controls) controls.style.display = 'none';
+
+    const textIds = ['dealer-total', 'card-table-result-text', 'tension-level'];
+    for (const id of textIds) {
+      const element = document.getElementById(id);
+      if (element) element.textContent = '';
+    }
+
+    document.getElementById('dealer-hand')?.replaceChildren();
+    document.getElementById('player-hands-container')?.replaceChildren();
+
+    [
+      'btn-hit',
+      'btn-stand',
+      'btn-use-trait',
+      'btn-use-aptitude',
+      'btn-shapeshifter-swap',
+      'btn-smuggler-swap',
+      'btn-weapon-redraw',
+      'btn-card-table-continue',
+    ].forEach((id) => this.replaceInteractiveButton(id));
+  }
 
   private getPlayerColor(playerId: string, isPlayerOne: boolean): string {
     if (this.playerColorMap.has(playerId)) {

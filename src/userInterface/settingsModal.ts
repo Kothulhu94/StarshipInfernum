@@ -4,6 +4,8 @@ import { saveLoadManager } from '@gameFlow/saveLoadManager';
 import { showScreen } from '../starshipInfernum';
 import { VerbosityLevel } from '@narrativeSystem/narrativeTypes';
 
+const LLM_ENDPOINT_STORAGE_KEY = 'starshipInfernum.llmEndpoint';
+
 export function initSettingsModal(): void {
   const modal = document.getElementById('settings-modal') as HTMLDialogElement | null;
   const verbositySelect = document.getElementById('setting-verbosity') as HTMLSelectElement | null;
@@ -20,8 +22,16 @@ export function initSettingsModal(): void {
   }
 
   if (llmEndpointInput) {
+    const storedEndpoint = window.localStorage.getItem(LLM_ENDPOINT_STORAGE_KEY);
+    if (storedEndpoint) {
+      llmEndpointInput.value = storedEndpoint;
+      koboldClient.setEndpoint(storedEndpoint);
+    }
+
     llmEndpointInput.addEventListener('change', () => {
-      koboldClient.setEndpoint(llmEndpointInput.value);
+      const endpoint = llmEndpointInput.value.trim();
+      koboldClient.setEndpoint(endpoint);
+      window.localStorage.setItem(LLM_ENDPOINT_STORAGE_KEY, endpoint);
     });
   }
 

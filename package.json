@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.11.0",
     "phaser": "^3.87.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.2",
     "typescript": "^5.8.3",
     "vite": "^6.3.5"
   }

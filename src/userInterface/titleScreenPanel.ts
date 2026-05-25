@@ -1,27 +1,15 @@
 import { showScreen } from '../starshipInfernum';
-import { saveLoadManager } from '@gameFlow/saveLoadManager';
+import { refreshScenarioContinueButtons } from './scenarioSelectionPanel';
 
 export function initTitleScreenPanel(): void {
-  const newGameBtn = document.getElementById('btn-new-game');
-  const continueBtn = document.getElementById('btn-continue') as HTMLButtonElement | null;
-  const settingsBtn = document.getElementById('btn-settings');
+  const startBtn = document.getElementById('btn-start');
+  const settingsBtn = document.getElementById('btn-model-settings');
   const settingsModal = document.getElementById('settings-modal') as HTMLDialogElement | null;
 
-  if (newGameBtn) {
-    newGameBtn.addEventListener('click', () => {
+  if (startBtn) {
+    startBtn.addEventListener('click', () => {
+      refreshScenarioContinueButtons();
       showScreen('scenario-selection-screen');
-    });
-  }
-
-  if (continueBtn) {
-    // Enable button if autosave exists
-    continueBtn.disabled = !saveLoadManager.hasSave('autosave');
-
-    continueBtn.addEventListener('click', () => {
-      const loaded = saveLoadManager.loadGame('autosave');
-      if (loaded) {
-        showScreen('game-screen');
-      }
     });
   }
 
