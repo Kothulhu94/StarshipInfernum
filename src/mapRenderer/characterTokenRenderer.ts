@@ -60,6 +60,17 @@ export class CharacterTokenRenderer {
     // Keep track of characters we updated to clean up deleted ones
     const activeIds = new Set<string>();
 
+    // Group characters by room to calculate offsets
+    const charactersByRoom = new Map<string, string[]>();
+    characters.forEach((char) => {
+      const roomId = characterPositions.get(char.id);
+      if (roomId) {
+        const list = charactersByRoom.get(roomId) || [];
+        list.push(char.id);
+        charactersByRoom.set(roomId, list);
+      }
+    });
+
     characters.forEach((char) => {
       const roomId = characterPositions.get(char.id);
       if (!roomId) return;
@@ -70,8 +81,18 @@ export class CharacterTokenRenderer {
       activeIds.add(char.id);
 
       // Compute center coordinates of target room
-      const tx = room.x * TILE_SIZE + (room.width * TILE_SIZE) / 2;
-      const ty = room.y * TILE_SIZE + (room.height * TILE_SIZE) / 2;
+      let tx = room.x * TILE_SIZE + (room.width * TILE_SIZE) / 2;
+      let ty = room.y * TILE_SIZE + (room.height * TILE_SIZE) / 2;
+
+      // Apply offset if multiple characters are in the same room
+      const charsInRoom = charactersByRoom.get(roomId) || [];
+      const roomIndex = charsInRoom.indexOf(char.id);
+      if (charsInRoom.length > 1) {
+        const radius = 18; // spreading distance
+        const angle = (roomIndex / charsInRoom.length) * Math.PI * 2;
+        tx += Math.cos(angle) * radius;
+        ty += Math.sin(angle) * radius;
+      }
 
       // Determine color theme
       let fillColor = COLOR_CONSOLE_CYAN;

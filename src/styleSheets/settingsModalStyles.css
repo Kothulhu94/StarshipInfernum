@@ -1,0 +1,149 @@
+/* ═══════════════════════════════════════════════════════════
+   SETTINGS MODAL AND FORM CONTROLS
+   ═══════════════════════════════════════════════════════════ */
+
+.modal {
+  background: var(--color-hull-gunmetal);
+  border: var(--border-accent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel), var(--shadow-glow-cyan);
+  color: var(--color-text-primary);
+  padding: var(--space-xl);
+  max-width: 480px;
+  width: 90vw;
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.modal::backdrop {
+  background: hsla(220, 20%, 6%, 0.8);
+  backdrop-filter: blur(4px);
+}
+
+.modal__title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-display);
+  text-transform: uppercase;
+  color: var(--color-console-cyan);
+  margin-bottom: var(--space-lg);
+  text-align: center;
+}
+
+.modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--space-md);
+}
+
+.settings-group {
+  border: var(--border-thin);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.settings-group__legend {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--color-alert-amber);
+  padding: 0 var(--space-xs);
+}
+
+.settings-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.settings-field--checkbox {
+  justify-content: flex-start;
+}
+
+.settings-field__label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.settings-field__select,
+.settings-field__input {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  background: var(--color-deep-space);
+  color: var(--color-text-primary);
+  border: var(--border-thin);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2xs) var(--space-xs);
+  min-width: 180px;
+}
+
+.settings-field__select:focus,
+.settings-field__input:focus {
+  outline: none;
+  border-color: var(--color-console-cyan);
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+.settings-field__status {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.settings-field__status--connected {
+  color: var(--color-success-green);
+}
+
+.settings-field__status--disconnected {
+  color: var(--color-damage-red);
+}
+
+.settings-field__range {
+  flex: 1;
+  accent-color: var(--color-console-cyan);
+}
+
+.settings-field__checkbox {
+  accent-color: var(--color-console-cyan);
+  width: 18px;
+  height: 18px;
+}
+
+.settings-button {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+  background: var(--color-panel-surface);
+  border: var(--border-thin);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  cursor: pointer;
+  margin-top: var(--space-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.settings-button:hover {
+  border-color: var(--color-console-cyan-dim);
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+.settings-save-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}

@@ -49,6 +49,7 @@ export function createCharacter(config: {
     gear: config.gear || null,
     isDead: false,
     isAI: config.isAI || false,
+    roomId: '',
     aiProfile: config.aiProfile || (config.isAI ? generateRandomAIProfile() : undefined)
   };
 }
@@ -72,6 +73,7 @@ export function createPregenCharacter(pregenName: string, isAI: boolean = false)
     gear: template.gear,
     isDead: false,
     isAI,
+    roomId: '',
     aiProfile: template.aiProfile
   };
 }
@@ -118,6 +120,7 @@ export function createRandomCharacter(isAI: boolean = false): Character {
     gear,
     isDead: false,
     isAI,
+    roomId: '',
     aiProfile: isAI ? generateRandomAIProfile() : undefined
   };
 }

@@ -104,6 +104,7 @@ export class GameStateStore {
       ...c,
       isDead: false,
       ghostCard: undefined,
+      roomId: '', // Placeholder, will be updated to seed room
     }));
     this.state.activeCharacterId = characters[0]?.id || null;
 
@@ -146,12 +147,18 @@ export class GameStateStore {
     this.state.activeRoomId = seedRoom?.id || null;
     this.state.currentDeck = 0;
 
+    // Assign the seed room ID to all characters
+    if (seedRoom) {
+      this.state.characters.forEach((c) => {
+        c.roomId = seedRoom.id;
+      });
+    }
+
     // Save cards state into arrays
     this.state.survivalDeckCards = (survivalDeck as any).cards;
     this.state.roDeckCards = (roDeck as any).cards;
     this.state.drawnJokers = [];
     this.state.adversaryInstances = [];
-
     this.state.gamePhase = 'EXPLORING';
     
     this.logMessage(`Initialized scenario: "${scenario.name}" on ${scenario.shipName}.`);

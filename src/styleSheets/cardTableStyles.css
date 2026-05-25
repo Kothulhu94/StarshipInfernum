@@ -7,6 +7,207 @@
   --card-height: 96px;
 }
 
+/* Card Table Overlay — slides up from bottom when active */
+.card-table {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(
+    to top,
+    var(--color-hull-gunmetal) 0%,
+    hsla(215, 15%, 14%, 0.97) 80%,
+    hsla(215, 15%, 14%, 0.85) 100%
+  );
+  border-top: var(--border-accent);
+  box-shadow: 0 -4px 30px hsla(0, 0%, 0%, 0.6);
+  padding: var(--space-lg);
+  z-index: var(--z-card-table);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  max-height: min(78dvh, calc(100dvh - 4rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  transform: translateY(0);
+  transition: transform var(--transition-dramatic);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.card-table[hidden] {
+  transform: translateY(100%);
+  display: flex !important;   /* Override hidden so animation works */
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.card-table__dealer-area,
+.card-table__player-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.card-table__hand {
+  display: flex;
+  gap: var(--space-xs);
+  justify-content: center;
+  min-height: var(--card-height);
+  align-items: center;
+}
+
+.card-table__label {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-display);
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.card-table__total {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-console-cyan);
+}
+
+.card-table__divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  padding: var(--space-2xs) 0;
+  border-top: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.card-table__badge {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--color-alert-amber);
+  background: var(--color-alert-amber-dim);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.card-table__tension {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-damage-red);
+  animation: tensionPulse 1s ease-in-out infinite;
+}
+
+.card-table__players {
+  display: flex;
+  gap: var(--space-xl);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.card-table__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  justify-content: center;
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--glass-border);
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    var(--color-hull-gunmetal) 0%,
+    hsla(215, 15%, 14%, 0.96) 100%
+  );
+}
+
+.card-table__result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--glass-border);
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    var(--color-hull-gunmetal) 0%,
+    hsla(215, 15%, 14%, 0.96) 100%
+  );
+}
+
+.card-table__result[hidden] {
+  display: none;
+}
+
+.card-table__result-text {
+  font-family: var(--font-display);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  color: var(--color-console-cyan);
+  text-align: center;
+}
+
+@media (max-height: 760px) {
+  .card-table {
+    gap: var(--space-xs);
+    max-height: calc(100dvh - 3rem);
+    padding: var(--space-sm);
+  }
+
+  .card-table__dealer-area,
+  .card-table__player-area {
+    gap: var(--space-2xs);
+  }
+
+  .card-table__divider {
+    gap: var(--space-sm);
+    padding: 0;
+  }
+
+  .card-table__label,
+  .card-table__badge,
+  .card-table__tension {
+    font-size: 0.62rem;
+  }
+
+  .card-table__total {
+    font-size: var(--font-size-sm);
+  }
+
+  .card-table__players {
+    gap: var(--space-sm);
+  }
+
+  .card-table__hand {
+    gap: 3px;
+  }
+
+  .card-table__controls,
+  .card-table__result {
+    gap: var(--space-xs);
+    padding-top: var(--space-xs);
+  }
+}
+
+@media (max-width: 900px), (max-height: 760px) {
+  .action-button {
+    min-height: 38px;
+    padding: var(--space-2xs) var(--space-sm);
+  }
+}
+
 /* Card Slot Container for each PC */
 .card-table__player-slot {
   display: flex;

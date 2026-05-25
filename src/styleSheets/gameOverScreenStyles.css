@@ -1,0 +1,48 @@
+/* ═══════════════════════════════════════════════════════════
+   GAME OVER SCREEN
+   ═══════════════════════════════════════════════════════════ */
+
+#gameover-screen {
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: var(--color-void-black);
+}
+
+.gameover__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  text-align: center;
+  max-width: 600px;
+}
+
+.gameover__heading {
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-black);
+  letter-spacing: var(--letter-spacing-display);
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.gameover__summary {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.gameover__survivors {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.gameover__menu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}

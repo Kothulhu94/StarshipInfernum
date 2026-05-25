@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
   resolve: {
     alias: {
       "@cardEngine": resolve(__dirname, "src/cardEngine"),
@@ -26,5 +26,13 @@ export default defineConfig({
     target: "ES2022",
     outDir: "dist",
     sourcemap: true,
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: isSsrBuild ? undefined : {
+      output: {
+        manualChunks: {
+          phaser: ["phaser"],
+        },
+      },
+    },
   },
-});
+}));

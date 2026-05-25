@@ -1,6 +1,6 @@
 import { Character } from './characterTypes';
 
-export const PREGEN_ROSTER: Omit<Character, 'id' | 'isDead' | 'isAI'>[] = [
+export const PREGEN_ROSTER: Omit<Character, 'id' | 'isDead' | 'isAI' | 'roomId'>[] = [
   {
     name: 'Daklis Surn',
     concept: 'Heroic Captain',

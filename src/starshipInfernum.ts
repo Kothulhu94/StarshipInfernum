@@ -203,10 +203,10 @@ function triggerPhaserStateUpdate(state: any): void {
   if (scene && state.activeRoomId) {
     const graph = gameStateStore.getMapGraph();
     
-    // Map characters to activeRoomId
+    // Map characters to activeRoomId or their individual roomId
     const characterPositions = new Map<string, string>();
     for (const char of state.characters) {
-      characterPositions.set(char.id, state.activeRoomId);
+      characterPositions.set(char.id, char.roomId || state.activeRoomId);
     }
 
     // Calculate which rooms have active obstacles

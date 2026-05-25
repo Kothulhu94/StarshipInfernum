@@ -45,6 +45,7 @@ export interface Character {
   gear: Gear;
   isDead: boolean;
   isAI: boolean;
+  roomId: string; // The specific room ID this character is currently in
   aiProfile?: AIPersonality;
   ghostCard?: { suit: string; rank: string }; // Held card for Dead PC ghost swap
 }

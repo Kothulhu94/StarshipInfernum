@@ -1,0 +1,127 @@
+/* ═══════════════════════════════════════════════════════════
+   GAME STATUS, CREW ROSTER, AND CRISIS SUMMARY PANELS
+   ═══════════════════════════════════════════════════════════ */
+
+/* Status Panel (right) */
+.panel--status {
+  grid-area: status;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  position: relative;
+  background: var(--color-deep-space);
+  border-left: var(--border-thin);
+  padding: var(--space-md);
+  overflow-y: auto;
+  z-index: var(--z-panels);
+}
+
+.panel--status .crisis-clock {
+  padding-top: 28px;
+}
+
+/* Crew Panel (bottom) */
+.panel--crew {
+  grid-area: crew;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--color-deep-space);
+  border-top: var(--border-thin);
+  z-index: var(--z-panels);
+  overflow: hidden;
+}
+
+/* Crisis Clock */
+.crisis-clock {
+  text-align: center;
+  padding-bottom: var(--space-md);
+  border-bottom: var(--border-thin);
+}
+
+.crisis-clock__tokens {
+  display: flex;
+  gap: var(--space-xs);
+  justify-content: center;
+  margin: var(--space-sm) 0;
+}
+
+.crisis-clock__reel {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* Crisis Cards */
+.crisis-cards {
+  padding-bottom: var(--space-md);
+  border-bottom: var(--border-thin);
+}
+
+.crisis-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-xs);
+  background: var(--color-hull-gunmetal);
+  border: var(--border-thin);
+}
+
+.crisis-card--major {
+  border-color: var(--color-damage-red-dim);
+}
+
+.crisis-card--minor {
+  border-color: var(--color-alert-amber-dim);
+}
+
+.crisis-card__label {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  min-width: 50px;
+}
+
+.crisis-card--major .crisis-card__label {
+  color: var(--color-damage-red);
+}
+
+.crisis-card--minor .crisis-card__label {
+  color: var(--color-alert-amber);
+}
+
+.crisis-card__name {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.crisis-card__jokers {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--color-ghost-violet);
+}
+
+/* Character Sheets */
+.character-sheets {
+  width: 100%;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: var(--space-sm) var(--space-md);
+}
+
+.character-sheets__roster {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-md);
+  padding: var(--space-2xs) 0;
+  width: max-content;
+  min-width: 100%;
+}

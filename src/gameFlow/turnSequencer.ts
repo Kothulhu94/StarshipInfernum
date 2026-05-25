@@ -83,6 +83,13 @@ export class TurnSequencer {
 
     gameStateStore.updateState((s) => {
       s.activeCharacterId = nextChar.id;
+      if (nextChar.roomId) {
+        s.activeRoomId = nextChar.roomId;
+        const targetRoom = gameStateStore.getMapGraph().getRoom(nextChar.roomId);
+        if (targetRoom) {
+          s.currentDeck = targetRoom.z;
+        }
+      }
     });
 
     gameStateStore.logMessage(`It is now ${nextChar.name}'s turn.`);
@@ -102,13 +109,17 @@ export class TurnSequencer {
     const targetRoom = graph.getRoom(toRoomId);
     if (!targetRoom) return;
 
-    const currentRoomId = state.activeRoomId;
+    const currentRoomId = activeChar.roomId;
     if (!currentRoomId || !graph.areConnected(currentRoomId, toRoomId)) {
       gameStateStore.logMessage(`Room: ${targetRoom.name}.`);
       return;
     }
 
     gameStateStore.updateState((s) => {
+      const charToUpdate = s.characters.find(c => c.id === activeChar.id);
+      if (charToUpdate) {
+        charToUpdate.roomId = toRoomId;
+      }
       s.activeRoomId = toRoomId;
       s.currentDeck = targetRoom.z;
     });
@@ -147,7 +158,7 @@ export class TurnSequencer {
     const graph = gameStateStore.getMapGraph();
     const activeChar = this.getActiveCharacter();
 
-    if (!activeChar || state.gamePhase !== 'EXPLORING' || !state.activeRoomId) return;
+    if (!activeChar || state.gamePhase !== 'EXPLORING' || !activeChar.roomId) return;
 
     const { survivalDeck, roDeck } = getDecksFromState();
 
@@ -159,9 +170,7 @@ export class TurnSequencer {
 
     // Grow map graph
     const layoutBuilder = new ShipLayoutBuilder();
-    console.log("BEFORE EXPLORE rooms in graph:", Array.from(graph.rooms.keys()));
-    const newRoom = layoutBuilder.discoverRoom(graph, state.activeRoomId, doorDirection, roomCardCode, obstacleCardCode);
-    console.log("AFTER EXPLORE rooms in graph:", Array.from(graph.rooms.keys()));
+    const newRoom = layoutBuilder.discoverRoom(graph, activeChar.roomId, doorDirection, roomCardCode, obstacleCardCode);
 
     if (!newRoom) {
       gameStateStore.logMessage(`Could not grow room in direction: ${doorDirection} (blocked or out of bounds).`);
@@ -171,6 +180,10 @@ export class TurnSequencer {
 
     // Set new room as active
     gameStateStore.updateState((s) => {
+      const charToUpdate = s.characters.find(c => c.id === activeChar.id);
+      if (charToUpdate) {
+        charToUpdate.roomId = newRoom.id;
+      }
       s.activeRoomId = newRoom.id;
       s.currentDeck = newRoom.z;
     });
@@ -179,7 +192,6 @@ export class TurnSequencer {
       `${activeChar.name} explored ${doorDirection} and discovered the ${newRoom.name}!`
     );
 
-    // Save decks back
     saveDecksToState(survivalDeck, roDeck);
 
     if (newRoom.roomObstacleDraw?.isRankMatch || newRoom.roomObstacleDraw?.isSuitMatch) {
@@ -240,11 +252,11 @@ export class TurnSequencer {
   public async restInSafetyRoom(ui: TestUI): Promise<boolean> {
     const state = gameStateStore.getState();
     const activeChar = this.getActiveCharacter();
-    if (!activeChar || state.gamePhase !== 'EXPLORING' || !state.activeRoomId) return false;
+    if (!activeChar || state.gamePhase !== 'EXPLORING' || !activeChar.roomId) return false;
 
     const graph = gameStateStore.getMapGraph();
-    const currentRoom = graph.getRoom(state.activeRoomId);
-    if (!currentRoom || !currentRoom.roomType.toLowerCase().includes('airlock') && !currentRoom.roomType.toLowerCase().includes('safety')) {
+    const currentRoom = graph.getRoom(activeChar.roomId);
+    if (!currentRoom || (!currentRoom.roomType.toLowerCase().includes('airlock') && !currentRoom.roomType.toLowerCase().includes('safety'))) {
       gameStateStore.logMessage('You can only rest in Airlocks or Safety Rooms.');
       return false;
     }
@@ -290,9 +302,9 @@ export class TurnSequencer {
     const graph = gameStateStore.getMapGraph();
     const activeChar = this.getActiveCharacter();
 
-    if (!activeChar || state.gamePhase !== 'OBSTACLE' || !state.activeRoomId) return;
+    if (!activeChar || state.gamePhase !== 'OBSTACLE' || !activeChar.roomId) return;
 
-    const currentRoom = graph.getRoom(state.activeRoomId);
+    const currentRoom = graph.getRoom(activeChar.roomId);
     const obstacleCardCode = currentRoom ? getObstacleCardCode(currentRoom) : undefined;
     if (!currentRoom || !obstacleCardCode) {
       phaseStateMachine.transitionTo('EXPLORING');
@@ -401,10 +413,10 @@ export class TurnSequencer {
   public async attemptCrisisStep(ui: TestUI): Promise<boolean> {
     const state = gameStateStore.getState();
     const activeChar = this.getActiveCharacter();
-    if (!activeChar || state.gamePhase !== 'EXPLORING' || !state.activeRoomId) return false;
+    if (!activeChar || state.gamePhase !== 'EXPLORING' || !activeChar.roomId) return false;
 
     const graph = gameStateStore.getMapGraph();
-    const currentRoom = graph.getRoom(state.activeRoomId);
+    const currentRoom = graph.getRoom(activeChar.roomId);
     if (!currentRoom) return false;
 
     // Check if we already exceeded 3 attempts in this room
