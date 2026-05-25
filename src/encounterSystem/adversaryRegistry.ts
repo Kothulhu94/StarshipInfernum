@@ -36,7 +36,7 @@ export const ADVERSARY_REGISTRY: Record<string, AdversaryData> = {
     level: 3,
     description: 'Deceptively harmless fluffy creature that reproduces at an alarming rate.',
     level3AbilityName: 'Exponential Swarm',
-    level3AbilityDesc: 'At the end of a full round, if this enemy is not defeated, it spreads to an adjacent room as a new Level 1 Adversary.'
+    level3AbilityDesc: 'At the end of a full round, if this enemy is not defeated, it spreads to an adjacent room as a weaker offspring.'
   },
   'drone_robot': {
     id: 'drone_robot',

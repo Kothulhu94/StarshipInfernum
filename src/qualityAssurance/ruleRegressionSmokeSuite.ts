@@ -24,6 +24,7 @@ import {
   createDeterministicDeck,
   getDeterministicDeckCards,
 } from './deterministicDeckFixture';
+import { assertNarrativeImmersionContract } from './narrativeImmersionContractGuard';
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {
@@ -131,6 +132,7 @@ function smokeCrisisJokerFlow(): void {
 export function runRuleRegressionSmokeSuite(): void {
   smokeSaveLoadContract();
   smokeRoomObstaclePairedDraws();
+  assertNarrativeImmersionContract();
   smokeBlackjackSemantics();
   smokeCrisisJokerFlow();
 }

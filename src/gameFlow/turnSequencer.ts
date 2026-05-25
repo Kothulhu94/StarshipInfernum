@@ -17,6 +17,7 @@ import { ShipLayoutBuilder } from '@mapGenerator/shipLayoutBuilder';
 import {
   createRoomObstacleDrawState,
   getObstacleCardCode,
+  getObstacleState,
   getRoomCardCode,
   hasBlockingObstacle
 } from '@mapGenerator/roomObstacleState';
@@ -117,7 +118,19 @@ export class TurnSequencer {
     // Autosave immediately upon room entry
     saveLoadManager.saveGame('autosave');
 
-    const roomFlavor = getRoomDescription(targetRoom.name, state.scenario?.id || '');
+    const obstacleCardCode = getObstacleCardCode(targetRoom);
+    const obstacle = obstacleCardCode ? getHydratedObstacle(obstacleCardCode, state.scenario) : undefined;
+    const roomFlavor = getRoomDescription({
+      roomName: targetRoom.name,
+      scenarioId: state.scenario?.id,
+      scenarioName: state.scenario?.name,
+      characterName: activeChar.name,
+      obstacleName: obstacle?.name,
+      obstacleState: getObstacleState(targetRoom),
+      hasAdversary: obstacle?.type === 'ADVERSARY',
+      isFirstVisit: false,
+      activeCrisisId: state.majorCrisisState?.id || state.minorCrisisState?.id,
+    });
     await showRoomDescriptionModal(targetRoom.name, roomFlavor);
 
     // Check if the target room has an unresolved obstacle
@@ -193,6 +206,7 @@ export class TurnSequencer {
       type: 'ROOM_ENTERED',
       context: {
         scenarioName: state.scenario?.name || '',
+        scenarioId: state.scenario?.id || '',
         characterName: activeChar.name,
         characterTraits: activeChar.traits.map((t) => t.name),
         roomName: newRoom.name,
@@ -203,7 +217,17 @@ export class TurnSequencer {
     // Save game immediately before resolving obstacle
     saveLoadManager.saveGame('autosave');
 
-    const roomFlavor = getRoomDescription(newRoom.name, state.scenario?.id || '');
+    const roomFlavor = getRoomDescription({
+      roomName: newRoom.name,
+      scenarioId: state.scenario?.id,
+      scenarioName: state.scenario?.name,
+      characterName: activeChar.name,
+      obstacleName,
+      obstacleState: getObstacleState(newRoom),
+      hasAdversary: obstacle?.type === 'ADVERSARY',
+      isFirstVisit: true,
+      activeCrisisId: state.majorCrisisState?.id || state.minorCrisisState?.id,
+    });
     await showRoomDescriptionModal(newRoom.name, roomFlavor);
 
     // Transition to obstacle phase
@@ -416,13 +440,13 @@ export class TurnSequencer {
 
         if (currentTarget.jokersRemaining <= 0) {
           recordFinalCrisisResolution(currentTarget, currentRoom.id);
-          const resolvedText = getCrisisResolvedText(target.type === 'MAJOR' ? s.majorCrisisState?.crisis.id || '' : s.minorCrisisState?.crisis.id || '', target.type === 'MAJOR');
+          const resolvedText = getCrisisResolvedText(currentTarget.id, target.type === 'MAJOR');
           gameStateStore.logMessage(`${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis resolved completely! ${resolvedText}`);
           if (target.type === 'MAJOR') {
             endGame(true, 'The Major Crisis has been resolved. You survived!');
           }
         } else {
-          const advanceText = getCrisisAdvanceText(target.type === 'MAJOR' ? s.majorCrisisState?.crisis.id || '' : s.minorCrisisState?.crisis.id || '', target.type === 'MAJOR');
+          const advanceText = getCrisisAdvanceText(currentTarget.id, target.type === 'MAJOR');
           gameStateStore.logMessage(
             `Success! Removed 1 step from ${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis. ${advanceText} Remaining: ${currentTarget.jokersRemaining}`
           );

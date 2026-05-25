@@ -11,6 +11,7 @@ import {
   exhaustTraitForHand,
   findUsableTrait,
   hasUsableTrait,
+  hasBustMitigatingTrait,
   playDealerHand,
   recoverOneExhaustedTrait
 } from '@cardEngine/blackjackTestSemantics';
@@ -127,7 +128,7 @@ export async function runGroupTest(
 
       // Mitigate player bust if possible
       if (pEval.isBust && playerState.appliedTraitModifier === 0) {
-        if (hasUsableTrait(p, pHand)) {
+        if (hasBustMitigatingTrait(p, pEval.total)) {
           const action = await ui.promptPlayerAction(p, pHand, true, { bustMitigation: true });
           if (typeof action === 'object' && action.type === 'TRAIT') {
             const trait = findUsableTrait(p, action.traitName, pHand);

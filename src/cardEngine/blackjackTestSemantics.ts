@@ -123,6 +123,28 @@ export function hasUsableTrait(
   });
 }
 
+/**
+ * Returns true only if at least one available trait would actually bring
+ * the player's current total down to 21 or below (i.e. genuinely un-bust them).
+ * Used to decide whether to offer the bust-mitigation prompt at all.
+ */
+export function hasBustMitigatingTrait(
+  character: Character,
+  currentTotal: number
+): boolean {
+  if (!canUseTraitModifier(character, true)) {
+    return false;
+  }
+
+  return character.traits.some(trait => {
+    if (trait.exhausted || trait.busted) {
+      return false;
+    }
+    // Only negative modifiers can reduce a bust; check if applying it fixes the total
+    return currentTotal + trait.modifier <= 21;
+  });
+}
+
 export function exhaustTraitForHand(
   state: BlackjackParticipantState,
   trait: Trait

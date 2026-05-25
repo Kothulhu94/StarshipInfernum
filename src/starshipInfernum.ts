@@ -24,7 +24,7 @@ import { initNPCTurnController } from '@gameFlow/npcTurnController';
 import { ShipMapScene } from './mapRenderer/shipMapScene';
 import '@userInterface/tooltipManager';
 import { showObstacleDescriptionModal } from './userInterface/obstacleDescriptionModal';
-import { OBSTACLE_REGISTRY } from './encounterSystem/obstacleRegistry';
+import { getHydratedObstacle } from './encounterSystem/obstacleRegistry';
 import { getObstacleCardCode, hasBlockingObstacle } from './mapGenerator/roomObstacleState';
 
 /* ─── Constants ───────────────────────────────────────── */
@@ -460,7 +460,7 @@ function boot(): void {
       const graph = gameStateStore.getMapGraph();
       const currentRoom = state.activeRoomId ? graph.getRoom(state.activeRoomId) : null;
       const obstacleCardCode = currentRoom ? getObstacleCardCode(currentRoom) : undefined;
-      const obstacle = obstacleCardCode ? OBSTACLE_REGISTRY[obstacleCardCode] : null;
+      const obstacle = obstacleCardCode ? getHydratedObstacle(obstacleCardCode, state.scenario) : null;
 
       if (obstacle && obstacle.type !== 'SAFETY') {
         showObstacleDescriptionModal(obstacle).then(() => {

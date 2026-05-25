@@ -52,7 +52,12 @@ function updateCrisisDisplay(state: GameState): void {
 
     const countdown = document.getElementById('crisis-clock-countdown');
     if (countdown) {
-      countdown.textContent = `${remaining} / ${total}`;
+      countdown.textContent = `${remaining} / ${total} Tokens`;
+    }
+    
+    const survivalCountdown = document.getElementById('survival-deck-countdown');
+    if (survivalCountdown) {
+      survivalCountdown.textContent = `${state.survivalDeckCards.length} cards`;
     }
 
     for (let i = 0; i < total; i++) {
@@ -83,7 +88,7 @@ function updateCrisisDisplay(state: GameState): void {
     if (majorSteps) {
       majorSteps.textContent = state.majorCrisisState.isResolved
         ? 'Resolved'
-        : `Remaining: ${state.majorCrisisState.jokersRemaining}`;
+        : `Steps to Resolve: ${state.majorCrisisState.jokersRemaining}`;
     }
     if (majorSlot) {
       if (state.majorCrisisState.isResolved) {
@@ -102,7 +107,7 @@ function updateCrisisDisplay(state: GameState): void {
     if (minorSteps) {
       minorSteps.textContent = state.minorCrisisState.isResolved
         ? 'Resolved'
-        : `Remaining: ${state.minorCrisisState.jokersRemaining}`;
+        : `Steps to Resolve: ${state.minorCrisisState.jokersRemaining}`;
     }
     if (minorSlot) {
       if (state.minorCrisisState.isResolved) {

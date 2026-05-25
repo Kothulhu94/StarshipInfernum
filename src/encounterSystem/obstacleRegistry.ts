@@ -1,6 +1,7 @@
 import { ObstacleDefinition } from './encounterTypes';
 import { ScenarioConfig } from '@scenarioData/scenarioTypes';
 import { getScenarioAdversaryByCard } from './adversaryScenarioRules';
+import { getScenarioObstacleFlavorText } from '@narrativeSystem/scenarioObstacleFlavorText';
 
 export interface RoomDefinition {
   cardCode: string;
@@ -212,18 +213,18 @@ export const OBSTACLE_REGISTRY: Record<string, ObstacleDefinition> = {
   },
   // 2H to KH are Adversaries. Mapped dynamically or statically.
   // We'll populate them with default Level 1-3 definitions, mapped to specific adversary indices.
-  '2H': { id: 'adv_lvl1_1', name: 'Level 1 Adversary', cardCode: '2H', type: 'ADVERSARY', flavorText: 'A low-level threat crawls out of the shadows.', rulesText: 'Requires 1 success to defeat.', specialRules: ['level_1'] },
-  '3H': { id: 'adv_lvl1_2', name: 'Level 1 Adversary', cardCode: '3H', type: 'ADVERSARY', flavorText: 'A hostile intruder spots you.', rulesText: 'Requires 1 success to defeat.', specialRules: ['level_1'] },
-  '4H': { id: 'adv_lvl1_3', name: 'Level 1 Adversary', cardCode: '4H', type: 'ADVERSARY', flavorText: 'A security system locks onto you.', rulesText: 'Requires 1 success to defeat.', specialRules: ['level_1'] },
-  '5H': { id: 'adv_lvl1_4', name: 'Level 1 Adversary', cardCode: '5H', type: 'ADVERSARY', flavorText: 'A mechanical cleaner goes wild.', rulesText: 'Requires 1 success to defeat.', specialRules: ['level_1'] },
-  '6H': { id: 'adv_lvl1_5', name: 'Level 1 Adversary', cardCode: '6H', type: 'ADVERSARY', flavorText: 'A low-level parasite searches for a host.', rulesText: 'Requires 1 success to defeat.', specialRules: ['level_1'] },
-  '7H': { id: 'adv_lvl2_1', name: 'Level 2 Adversary', cardCode: '7H', type: 'ADVERSARY', flavorText: 'A dangerous enemy stands in your way.', rulesText: 'Requires 2 successes to defeat.', specialRules: ['level_2'] },
-  '8H': { id: 'adv_lvl2_2', name: 'Level 2 Adversary', cardCode: '8H', type: 'ADVERSARY', flavorText: 'A larger threat charges at you.', rulesText: 'Requires 2 successes to defeat.', specialRules: ['level_2'] },
-  '9H': { id: 'adv_lvl2_3', name: 'Level 2 Adversary', cardCode: '9H', type: 'ADVERSARY', flavorText: 'A mutant crewmate blocks the door.', rulesText: 'Requires 2 successes to defeat.', specialRules: ['level_2'] },
-  '10H': { id: 'adv_lvl2_4', name: 'Level 2 Adversary', cardCode: '10H', type: 'ADVERSARY', flavorText: 'An armored defense unit powers up.', rulesText: 'Requires 2 successes to defeat.', specialRules: ['level_2'] },
-  'JH': { id: 'adv_lvl3_1', name: 'Level 3 Adversary', cardCode: 'JH', type: 'ADVERSARY', flavorText: 'An apex predator or major threat stalks you.', rulesText: 'Requires 3 successes to defeat. Possesses unique abilities.', specialRules: ['level_3'] },
-  'QH': { id: 'adv_lvl3_2', name: 'Level 3 Adversary', cardCode: 'QH', type: 'ADVERSARY', flavorText: 'A devastating threat stands before you.', rulesText: 'Requires 3 successes to defeat. Possesses unique abilities.', specialRules: ['level_3'] },
-  'KH': { id: 'adv_lvl3_3', name: 'Level 3 Adversary', cardCode: 'KH', type: 'ADVERSARY', flavorText: 'A fearsome boss blockades the area.', rulesText: 'Requires 3 successes to defeat. Possesses unique abilities.', specialRules: ['level_3'] },
+  '2H': { id: 'adv_lvl1_1', name: 'Lurking Threat', cardCode: '2H', type: 'ADVERSARY', flavorText: 'A small threat crawls out of the shadows.', rulesText: 'Requires 1 success to defeat.', specialRules: ['level_1'] },
+  '3H': { id: 'adv_lvl1_2', name: 'Hostile Intruder', cardCode: '3H', type: 'ADVERSARY', flavorText: 'A hostile intruder spots you.', rulesText: 'Requires 1 success to defeat.', specialRules: ['level_1'] },
+  '4H': { id: 'adv_lvl1_3', name: 'Targeting System', cardCode: '4H', type: 'ADVERSARY', flavorText: 'A security system locks onto you.', rulesText: 'Requires 1 success to defeat.', specialRules: ['level_1'] },
+  '5H': { id: 'adv_lvl1_4', name: 'Runaway Machine', cardCode: '5H', type: 'ADVERSARY', flavorText: 'A mechanical cleaner goes wild.', rulesText: 'Requires 1 success to defeat.', specialRules: ['level_1'] },
+  '6H': { id: 'adv_lvl1_5', name: 'Searching Parasite', cardCode: '6H', type: 'ADVERSARY', flavorText: 'A hungry parasite searches for a host.', rulesText: 'Requires 1 success to defeat.', specialRules: ['level_1'] },
+  '7H': { id: 'adv_lvl2_1', name: 'Corridor Hunter', cardCode: '7H', type: 'ADVERSARY', flavorText: 'A dangerous enemy stands in your way.', rulesText: 'Requires 2 successes to defeat.', specialRules: ['level_2'] },
+  '8H': { id: 'adv_lvl2_2', name: 'Heavy Stalker', cardCode: '8H', type: 'ADVERSARY', flavorText: 'A larger threat charges at you.', rulesText: 'Requires 2 successes to defeat.', specialRules: ['level_2'] },
+  '9H': { id: 'adv_lvl2_3', name: 'Mutated Crewmate', cardCode: '9H', type: 'ADVERSARY', flavorText: 'A mutant crewmate blocks the door.', rulesText: 'Requires 2 successes to defeat.', specialRules: ['level_2'] },
+  '10H': { id: 'adv_lvl2_4', name: 'Armored Defense Unit', cardCode: '10H', type: 'ADVERSARY', flavorText: 'An armored defense unit powers up.', rulesText: 'Requires 2 successes to defeat.', specialRules: ['level_2'] },
+  'JH': { id: 'adv_lvl3_1', name: 'Apex Predator', cardCode: 'JH', type: 'ADVERSARY', flavorText: 'An apex predator or major threat stalks you.', rulesText: 'Requires 3 successes to defeat. Possesses unique abilities.', specialRules: ['level_3'] },
+  'QH': { id: 'adv_lvl3_2', name: 'Devastating Entity', cardCode: 'QH', type: 'ADVERSARY', flavorText: 'A devastating threat stands before you.', rulesText: 'Requires 3 successes to defeat. Possesses unique abilities.', specialRules: ['level_3'] },
+  'KH': { id: 'adv_lvl3_3', name: 'Shipboard Nemesis', cardCode: 'KH', type: 'ADVERSARY', flavorText: 'A fearsome enemy blockades the area.', rulesText: 'Requires 3 successes to defeat. Possesses unique abilities.', specialRules: ['level_3'] },
 
   // --- DIAMONDS: Personal Obstacles & Safety ---
   'AD': {
@@ -469,19 +470,17 @@ export function getHydratedObstacle(cardCode: string, scenario: ScenarioConfig |
   if (!baseObstacle) return undefined;
 
   if (baseObstacle.type === 'ADVERSARY') {
-    let level: 1 | 2 | 3 = 1;
-    if (baseObstacle.name.includes('Level 2')) level = 2;
-    if (baseObstacle.name.includes('Level 3')) level = 3;
+    const level: 1 | 2 | 3 = baseObstacle.specialRules?.includes('level_3') ? 3 : baseObstacle.specialRules?.includes('level_2') ? 2 : 1;
 
     const adversary = getScenarioAdversaryByCard(cardCode, level, scenario);
     
     return {
       ...baseObstacle,
-      name: `${adversary.name} (Level ${level})`,
+      name: adversary.name,
       flavorText: adversary.description,
       rulesText: baseObstacle.rulesText + (adversary.level3AbilityDesc ? ` ${adversary.level3AbilityName}: ${adversary.level3AbilityDesc}` : '')
     };
   }
 
-  return baseObstacle;
+  return { ...baseObstacle, flavorText: getScenarioObstacleFlavorText(baseObstacle, scenario) };
 }

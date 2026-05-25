@@ -153,13 +153,19 @@
         <!-- Crisis Clock -->
         <div id="crisis-clock" class="crisis-clock">
           <div style="display: flex; justify-content: space-between; align-items: baseline;">
-            <h2 class="panel__title" style="margin-bottom: 0;">Crisis Clock</h2>
-            <span id="crisis-clock-countdown" class="crisis-clock__countdown" style="font-family: var(--font-mono, JetBrains Mono); color: var(--color-text-secondary); font-size: var(--font-size-sm);"></span>
+            <h2 class="panel__title" style="margin-bottom: 0;" title="Time remaining until the game ends">Crisis Clock</h2>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+              <span id="reel-counter" class="crisis-clock__reel" title="The current iteration of the Survival Deck">Reel 1</span>
+              <span id="crisis-clock-countdown" class="crisis-clock__countdown" style="font-family: var(--font-mono, JetBrains Mono); color: var(--color-text-secondary); font-size: var(--font-size-xs);" title="Tokens remaining before Game Over"></span>
+            </div>
           </div>
-          <div id="clock-tokens" class="crisis-clock__tokens" style="margin-top: var(--space-xs);">
+          <div id="clock-tokens" class="crisis-clock__tokens" style="margin-top: var(--space-xs);" title="Tokens represent how many times the deck can be reshuffled">
             <!-- Token elements injected dynamically -->
           </div>
-          <span id="reel-counter" class="crisis-clock__reel">Reel 1</span>
+          <div style="margin-top: var(--space-xs); font-family: var(--font-mono, JetBrains Mono); font-size: var(--font-size-xs); color: var(--color-text-secondary); display: flex; justify-content: space-between;" title="Cards drawn before the deck reshuffles and a Token is lost">
+              <span>Survival Deck:</span>
+              <span id="survival-deck-countdown">-- cards</span>
+          </div>
         </div>
 
         <!-- Crisis Cards -->

@@ -1,4 +1,7 @@
-import { RoomFlavorText } from './roomFlavorText';
+import {
+  buildScenarioRoomDescription,
+} from './roomDescriptions/roomDescriptionRegistry';
+import { RoomDescriptionContext } from './roomDescriptions/roomDescriptionTypes';
 
 export const ObstacleFlavorText: Record<string, string> = {
   'Acid': 'The floor is covered in pools of bubbling green acid and those pools are growing larger by the second.',
@@ -68,13 +71,16 @@ export const ScenarioFlavorText: Record<string, string> = {
   'Terror on Holodeck Three': 'A malfunction in the ship\'s dimensional drive has merged the physical ship with terrifying holographic simulations. Nothing is real, but everything can kill you.'
 };
 
-export function getRoomDescription(roomName: string, scenarioId: string): string {
-  const roomData = RoomFlavorText[roomName];
-  if (roomData && roomData[scenarioId]) {
-    return roomData[scenarioId];
-  }
-  // Fallback if scenario specific text isn't found
-  return `You enter the ${roomName}. It looks eerily quiet.`;
+export function getRoomDescription(roomName: string, scenarioId: string): string;
+export function getRoomDescription(context: RoomDescriptionContext): string;
+export function getRoomDescription(
+  roomNameOrContext: string | RoomDescriptionContext,
+  scenarioId = ''
+): string {
+  const context = typeof roomNameOrContext === 'string'
+    ? { roomName: roomNameOrContext, scenarioId }
+    : roomNameOrContext;
+  return buildScenarioRoomDescription(context);
 }
 
 export function getObstacleDescription(obstacleName: string): string {

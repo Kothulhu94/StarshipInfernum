@@ -11,7 +11,13 @@ export function getNarrativeFallbackText(event: NarrativeEvent): string {
   const ctx = event.context;
   switch (event.type) {
     case 'ROOM_ENTERED':
-      return getRoomDescription(ctx.roomName || 'Unknown Room', ctx.scenarioId || 'unknown_scenario');
+      return getRoomDescription({
+        roomName: ctx.roomName || 'Unknown Room',
+        scenarioId: ctx.scenarioId,
+        scenarioName: ctx.scenarioName,
+        characterName: ctx.characterName,
+        obstacleName: ctx.obstacleName,
+      });
     case 'OBSTACLE_REVEALED':
       return getObstacleDescription(ctx.obstacleName || 'Unknown Obstacle');
     case 'TEST_BUST':
