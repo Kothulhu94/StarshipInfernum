@@ -11,6 +11,7 @@ import { gameStateStore } from '@gameFlow/gameStateStore';
 import { gameEventBus } from '@gameFlow/gameEventBus';
 import { getRequiredAdversarySuccesses, AdversaryDisposition } from './adversaryStateTypes';
 import { getAdversaryAdvantageText, getAdversaryHitText, getAdversaryStalemateText } from '@narrativeSystem/combatFlavorText';
+import { hasBustMitigatingTrait } from '@cardEngine/blackjackTestSemantics';
 
 /**
  * Handles the combat loop against a mobile Adversary.
@@ -218,9 +219,8 @@ export async function runAdversaryCombat(
     }
 
     // Mitigate player bust with Trait if not yet used
-    if (playerEval.isBust && canUseTraitModifier(player, appliedTraitModifier === 0)) {
-      const availableTraits = player.traits.filter(t => !t.exhausted && !t.busted);
-      if (availableTraits.length > 0) {
+    if (playerEval.isBust && appliedTraitModifier === 0) {
+      if (hasBustMitigatingTrait(player, playerEval.total)) {
         const action = await ui.promptPlayerAction(player, playerHand, true, { bustMitigation: true });
         if (typeof action === 'object' && action.type === 'TRAIT') {
           const trait = canUseTraitModifier(player, true)

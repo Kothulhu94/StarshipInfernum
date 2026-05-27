@@ -3,7 +3,9 @@ import {
   comparePlayerAndDealer,
   dealPlayerOpeningHand,
   evaluatePlayerHand,
+  hasBustMitigatingTrait,
 } from '@cardEngine/blackjackTestSemantics';
+import { getPlayerActionAvailability } from '@characterSystem/playerActionModel';
 import {
   checkCrisisUnlocked,
   isDisasterTrigger,
@@ -78,6 +80,39 @@ function smokeBlackjackSemantics(): void {
     { suit: Suit.CLUBS, rank: '5', faceUp: true },
   ], -4);
   assert(!mitigatedBust.isBust && mitigatedBust.total === 21, 'Trait modifiers must be able to mitigate busts.');
+
+  // Verify that bust mitigating trait logic prevents selecting traits if no single trait is enough to bring the score <= 21
+  const characterMock = {
+    id: 'test-p',
+    name: 'Test Player',
+    concept: 'Test',
+    traits: [
+      { name: 'Strength', modifier: 3, exhausted: false, busted: false },
+      { name: 'Agility', modifier: 2, exhausted: false, busted: false },
+      { name: 'Cunning', modifier: 1, exhausted: true, busted: false }, // Exhausted
+    ],
+    aptitude: 'Trainee' as any,
+    gear: null,
+    isDead: false,
+    isAI: false,
+    roomId: 'room1',
+  };
+
+  // If score is 24, a single trait of 3 is enough to bring it down to 21 (24 - 3 = 21)
+  assert(hasBustMitigatingTrait(characterMock, 24), 'Should have mitigating trait for total 24');
+
+  // If score is 25, the max trait is 3, which brings it to 22 (25 - 3 = 22 > 21). No single trait is enough.
+  assert(!hasBustMitigatingTrait(characterMock, 25), 'Should NOT have mitigating trait for total 25');
+
+  // Verify getPlayerActionAvailability behavior
+  const handMock = [
+    { suit: Suit.HEARTS, rank: '10', faceUp: true },
+    { suit: Suit.SPADES, rank: '10', faceUp: true },
+    { suit: Suit.CLUBS, rank: '5', faceUp: true }, // Total 25 (Bust!)
+  ];
+
+  const avail = getPlayerActionAvailability(characterMock, handMock, true);
+  assert(!avail.canUseTrait, 'getPlayerActionAvailability should disable traits if bust is not mitigatable by any single trait');
 
   const push = comparePlayerAndDealer(
     { total: 19, isSoft: false, isBust: false, isNatural21: false },

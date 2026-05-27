@@ -5,6 +5,16 @@ var Suit = /* @__PURE__ */ ((Suit2) => {
   Suit2["CLUBS"] = "CLUBS";
   return Suit2;
 })(Suit || {});
+function canShapeshifterSwap(character, hasUsedSwapThisTest) {
+  return character.aptitude === "Shapeshifter";
+}
+function canSmugglerSwap(character, hasUsedSwapThisTest) {
+  return character.aptitude === "Smuggler";
+}
+function hasGear(character, gear) {
+  if (character.gear === gear) return true;
+  return false;
+}
 function evaluateHand(cards) {
   let total = 0;
   let aces = 0;
@@ -27,6 +37,30 @@ function evaluateHand(cards) {
   const isNatural21 = cards.length === 2 && total === 21;
   return { total, isSoft, isBust, isNatural21 };
 }
+function canUseTraitModifier(character, canUseTrait) {
+  return character.gear !== "spacesuit";
+}
+function getPlayerActionAvailability(character, hand, canUseTrait, context = {}) {
+  const weaponForRedraw = hasGear(character, "ranged_weapon") ? "ranged_weapon" : hasGear(character, "melee_weapon") ? "melee_weapon" : null;
+  let allowedTrait = canUseTraitModifier(character);
+  if (allowedTrait) {
+    const evalRes = evaluateHand(hand);
+    if (evalRes.isBust) {
+      const availableTraits = character.traits.filter((t) => !t.exhausted && !t.busted);
+      const hasMitigating = availableTraits.some((t) => evalRes.total - Math.abs(t.modifier) <= 21);
+      if (!hasMitigating) {
+        allowedTrait = false;
+      }
+    }
+  }
+  return {
+    canUseTrait: allowedTrait,
+    canUseShapeshifterSwap: hand.length > 0 && canShapeshifterSwap(character, !!context.hasUsedShapeshifterSwap),
+    canUseSmugglerSwap: hand.length > 0 && canSmugglerSwap(character, !!context.hasUsedSmugglerSwap),
+    canUseWeaponRedraw: hand.length > 0 && !!context.canUseWeaponRedraw && weaponForRedraw !== null,
+    weaponForRedraw
+  };
+}
 function dealFaceUpCards(deck, count) {
   const hand = [];
   for (let i = 0; i < count; i++) {
@@ -48,6 +82,17 @@ function evaluatePlayerHand(hand, traitModifier = 0) {
     isBust: total > 21,
     isNatural21: raw.isNatural21 && traitModifier === 0
   };
+}
+function hasBustMitigatingTrait(character, currentTotal) {
+  if (!canUseTraitModifier(character)) {
+    return false;
+  }
+  return character.traits.some((trait) => {
+    if (trait.exhausted || trait.busted) {
+      return false;
+    }
+    return currentTotal - Math.abs(trait.modifier) <= 21;
+  });
 }
 function comparePlayerAndDealer(playerEvaluation, dealerEvaluation) {
   {
@@ -1693,6 +1738,26 @@ function smokeBlackjackSemantics() {
     { suit: Suit.CLUBS, rank: "5", faceUp: true }
   ], -4);
   assert(!mitigatedBust.isBust && mitigatedBust.total === 21, "Trait modifiers must be able to mitigate busts.");
+  const characterMock = {
+    traits: [
+      { name: "Strength", modifier: 3, exhausted: false, busted: false },
+      { name: "Agility", modifier: 2, exhausted: false, busted: false },
+      { name: "Cunning", modifier: 1, exhausted: true, busted: false }
+      // Exhausted
+    ],
+    aptitude: "Trainee",
+    gear: null
+  };
+  assert(hasBustMitigatingTrait(characterMock, 24), "Should have mitigating trait for total 24");
+  assert(!hasBustMitigatingTrait(characterMock, 25), "Should NOT have mitigating trait for total 25");
+  const handMock = [
+    { suit: Suit.HEARTS, rank: "10", faceUp: true },
+    { suit: Suit.SPADES, rank: "10", faceUp: true },
+    { suit: Suit.CLUBS, rank: "5", faceUp: true }
+    // Total 25 (Bust!)
+  ];
+  const avail = getPlayerActionAvailability(characterMock, handMock);
+  assert(!avail.canUseTrait, "getPlayerActionAvailability should disable traits if bust is not mitigatable by any single trait");
   const push = comparePlayerAndDealer();
   assert(push === "PUSH", "Equal non-bust scores must push.");
   const deck = createDeterministicDeck([

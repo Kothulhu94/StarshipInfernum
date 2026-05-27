@@ -2,6 +2,7 @@ import { Card } from '@cardEngine/cardDefinitions';
 import { Character } from './characterTypes';
 import { canShapeshifterSwap, canSmugglerSwap } from './aptitudeExecutor';
 import { hasGear } from './gearInventory';
+import { evaluateHand } from '@cardEngine/handEvaluator';
 
 export type GearAction =
   | { type: 'GEAR'; gear: 'ranged_weapon' | 'melee_weapon'; action: 'REDRAW_LAST_CARD' };
@@ -49,8 +50,20 @@ export function getPlayerActionAvailability(
       ? 'melee_weapon'
       : null;
 
+  let allowedTrait = canUseTraitModifier(character, canUseTrait);
+  if (allowedTrait) {
+    const evalRes = evaluateHand(hand);
+    if (evalRes.isBust) {
+      const availableTraits = character.traits.filter(t => !t.exhausted && !t.busted);
+      const hasMitigating = availableTraits.some(t => evalRes.total - Math.abs(t.modifier) <= 21);
+      if (!hasMitigating) {
+        allowedTrait = false;
+      }
+    }
+  }
+
   return {
-    canUseTrait: canUseTraitModifier(character, canUseTrait),
+    canUseTrait: allowedTrait,
     canUseShapeshifterSwap: hand.length > 0 && canShapeshifterSwap(character, !!context.hasUsedShapeshifterSwap),
     canUseSmugglerSwap: hand.length > 0 && canSmugglerSwap(character, !!context.hasUsedSmugglerSwap),
     canUseWeaponRedraw: hand.length > 0 && !!context.canUseWeaponRedraw && weaponForRedraw !== null,

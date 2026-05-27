@@ -7,6 +7,7 @@ import { damageTrait } from '@characterSystem/traitManager';
 import { canSurvivorSlink } from '@characterSystem/aptitudeExecutor';
 import { canUseTraitModifier } from '@characterSystem/playerActionModel';
 import { gameStateStore } from '@gameFlow/gameStateStore';
+import { hasBustMitigatingTrait } from '@cardEngine/blackjackTestSemantics';
 
 export interface DisasterResult {
   resolved: boolean;
@@ -150,10 +151,9 @@ export async function runDisasterTest(
       }
 
       // Mitigate bust with trait
-      if (pEval.isBust && canUseTraitModifier(p, appliedTraitModifier === 0)) {
-        const availableTraits = p.traits.filter(t => !t.exhausted && !t.busted);
-        if (availableTraits.length > 0) {
-          const action = await ui.promptPlayerAction(p, pHand, true);
+      if (pEval.isBust && appliedTraitModifier === 0) {
+        if (hasBustMitigatingTrait(p, pEval.total)) {
+          const action = await ui.promptPlayerAction(p, pHand, true, { bustMitigation: true });
           if (typeof action === 'object' && action.type === 'TRAIT') {
             const trait = canUseTraitModifier(p, true)
               ? p.traits.find(t => t.name === action.traitName && !t.exhausted && !t.busted)
@@ -161,7 +161,7 @@ export async function runDisasterTest(
             if (trait) {
               trait.exhausted = true;
               traitsExhausted.push(trait.name);
-              appliedTraitModifier = -trait.modifier;
+              appliedTraitModifier = trait.modifier;
               playerAppliedModifiers.set(p.id, appliedTraitModifier);
 
               pEval.total += appliedTraitModifier;
