@@ -88,7 +88,9 @@ function updateCrisisDisplay(state: GameState): void {
     if (majorSteps) {
       majorSteps.textContent = state.majorCrisisState.isResolved
         ? 'Resolved'
-        : `Steps to Resolve: ${state.majorCrisisState.jokersRemaining}`;
+        : state.majorCrisisState.jokersRemaining > 0
+        ? `Steps to Resolve: ${state.majorCrisisState.jokersRemaining}`
+        : 'Final Test Ready';
     }
     if (majorSlot) {
       if (state.majorCrisisState.isResolved) {
@@ -107,7 +109,9 @@ function updateCrisisDisplay(state: GameState): void {
     if (minorSteps) {
       minorSteps.textContent = state.minorCrisisState.isResolved
         ? 'Resolved'
-        : `Steps to Resolve: ${state.minorCrisisState.jokersRemaining}`;
+        : state.minorCrisisState.jokersRemaining > 0
+        ? `Steps to Resolve: ${state.minorCrisisState.jokersRemaining}`
+        : 'Final Test Ready';
     }
     if (minorSlot) {
       if (state.minorCrisisState.isResolved) {

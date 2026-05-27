@@ -224,7 +224,10 @@
   <!-- ═══════════════════════════════════════════════════ -->
   <dialog id="settings-modal" class="modal modal--settings">
     <form method="dialog" class="modal__form">
-      <h2 class="modal__title">Settings</h2>
+      <div class="modal__header">
+        <h2 class="modal__title">Settings</h2>
+        <button id="btn-close-settings" type="button" class="modal__close-button" aria-label="Close settings">X</button>
+      </div>
 
       <fieldset class="settings-group">
         <legend class="settings-group__legend">Narrative</legend>

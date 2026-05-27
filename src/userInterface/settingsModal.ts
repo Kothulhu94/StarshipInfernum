@@ -28,6 +28,7 @@ async function safeInvoke<T>(cmd: string, args?: any): Promise<T> {
 
 export function initSettingsModal(): void {
   const modal = document.getElementById('settings-modal') as HTMLDialogElement | null;
+  const closeSettingsBtn = document.getElementById('btn-close-settings') as HTMLButtonElement | null;
   const verbositySelect = document.getElementById('setting-verbosity') as HTMLSelectElement | null;
   
   const providerSelect = document.getElementById('setting-llm-provider') as HTMLSelectElement | null;
@@ -42,6 +43,44 @@ export function initSettingsModal(): void {
   const llmEndpointInput = document.getElementById('setting-llm-endpoint') as HTMLInputElement | null;
   const testLlmBtn = document.getElementById('btn-test-llm') as HTMLButtonElement | null;
   const llmStatus = document.getElementById('llm-status');
+
+  const closeSettingsModal = () => {
+    if (modal?.open) {
+      modal.close();
+    }
+  };
+
+  if (closeSettingsBtn) {
+    closeSettingsBtn.addEventListener('click', closeSettingsModal);
+  }
+
+  if (modal) {
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && modal.open) {
+        event.preventDefault();
+        closeSettingsModal();
+      }
+    }, true);
+
+    modal.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      closeSettingsModal();
+    });
+
+    modal.addEventListener('click', (event) => {
+      if (event.target !== modal) return;
+      const rect = modal.getBoundingClientRect();
+      const clickedInsideDialog =
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom;
+
+      if (!clickedInsideDialog) {
+        closeSettingsModal();
+      }
+    });
+  }
 
   // Load initial settings values
   if (verbositySelect) {

@@ -34,11 +34,8 @@ import { getCrisisAdvanceText, getCrisisResolvedText } from '@narrativeSystem/cr
 
 function cardCodeToCard(cardCode: string): Card {
   const rank = cardCode.substring(0, cardCode.length - 1) as any;
-  const suitLetter = cardCode.charAt(cardCode.length - 1);
-  let suit = 'SPADES';
-  if (suitLetter === 'H') suit = 'HEARTS';
-  if (suitLetter === 'D') suit = 'DIAMONDS';
-  if (suitLetter === 'C') suit = 'CLUBS';
+  const letter = cardCode.charAt(cardCode.length - 1);
+  const suit = letter === 'H' ? 'HEARTS' : letter === 'D' ? 'DIAMONDS' : letter === 'C' ? 'CLUBS' : 'SPADES';
   return { suit: suit as any, rank, faceUp: true };
 }
 
@@ -447,10 +444,11 @@ export class TurnSequencer {
       gameStateStore.updateState((s) => {
         const currentTarget = target.type === 'MAJOR' ? s.majorCrisisState : s.minorCrisisState;
         if (!currentTarget) return;
+        const alreadyUnlocked = currentTarget.jokersRemaining <= 0;
         onCrisisTestSuccess(currentTarget);
         recordSuccessfulCrisisStep(currentTarget, currentRoom.id);
 
-        if (currentTarget.jokersRemaining <= 0) {
+        if (alreadyUnlocked) {
           recordFinalCrisisResolution(currentTarget, currentRoom.id);
           const resolvedText = getCrisisResolvedText(currentTarget.id, target.type === 'MAJOR');
           gameStateStore.logMessage(`${target.type === 'MAJOR' ? 'Major' : 'Minor'} Crisis resolved completely! ${resolvedText}`);

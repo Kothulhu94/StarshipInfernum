@@ -57,7 +57,9 @@ function evaluateMajorTarget(state: GameState, room: RoomNode): CrisisAttemptDec
     return { target: null, reason: 'Missing Crewmates must be resolved before the Major Crisis can progress.' };
   }
 
-
+  if (major.jokersRemaining <= 0 && isFinalBlockedByRoom(major, room.id)) {
+    return { target: null, reason: 'The final resolution test must be performed in a different room from previous steps.' };
+  }
 
   if (wasStepCompletedInRoom(major, room.id)) {
     return { target: null, reason: 'This room has already produced a successful Major Crisis step.' };
@@ -74,7 +76,9 @@ function evaluateMinorTarget(state: GameState, room: RoomNode): CrisisAttemptDec
   const minor = state.minorCrisisState;
   if (!minor || minor.isResolved) return { target: null };
 
-
+  if (minor.jokersRemaining <= 0 && isFinalBlockedByRoom(minor, room.id)) {
+    return { target: null, reason: 'The final resolution test must be performed in a different room from previous steps.' };
+  }
 
   if (wasStepCompletedInRoom(minor, room.id)) {
     return { target: null, reason: 'This room has already produced a successful Minor Crisis step.' };

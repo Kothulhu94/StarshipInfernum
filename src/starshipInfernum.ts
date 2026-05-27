@@ -16,6 +16,7 @@ import { initCrisisClockDisplay } from './userInterface/crisisClockDisplay';
 import { initNarrativeLogPanel } from './userInterface/narrativeLogPanel';
 import { initSettingsModal } from './userInterface/settingsModal';
 import { initGameOverScreen } from './userInterface/gameOverScreen';
+import { initGemmaAgentBridge } from './userInterface/gemmaAgentBridge';
 import { cardTableOverlay } from './userInterface/cardTableOverlay';
 import { turnSequencer } from '@gameFlow/turnSequencer';
 import { gameEventBus } from '@gameFlow/gameEventBus';
@@ -428,6 +429,7 @@ function boot(): void {
   initNarrativeLogPanel();
   initSettingsModal();
   initGameOverScreen();
+  initGemmaAgentBridge();
   initAdjustableGamePanels();
   initNPCTurnController();
 
